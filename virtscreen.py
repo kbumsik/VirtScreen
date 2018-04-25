@@ -260,11 +260,14 @@ class Window(QDialog):
             self.createDisplayButton.setText("Create a Virtual Display")
             self.createDisplayButton.setEnabled(True)
             self.startVNCButton.setEnabled(False)
+        self.createDisplayAction.setEnabled(not self.isDisplayCreated)
+        self.deleteDisplayAction.setEnabled(self.isDisplayCreated)
+        self.startVNCAction.setEnabled(self.isDisplayCreated)
+        self.stopVNCAction.setEnabled(False)
         
     @pyqtSlot()
     def startVNCPressed(self):
         if not self.isVNCRunning:
-            self.createDisplayButton.setEnabled(False)
             self.startVNC()
         else:
             self.VNCServer.kill()
@@ -387,11 +390,21 @@ class Window(QDialog):
         self.VNCGroupBox.setLayout(layout)
 
     def createActions(self):
-        self.minimizeAction = QAction("&Start sharing", self)
-        self.minimizeAction.triggered.connect(self.hide)
+        self.createDisplayAction = QAction("Create display", self)
+        self.createDisplayAction.triggered.connect(self.createDisplayPressed)
+        self.createDisplayAction.setEnabled(True)
 
-        self.maximizeAction = QAction("S&top sharing", self)
-        self.maximizeAction.triggered.connect(self.showMaximized)
+        self.deleteDisplayAction = QAction("Disable display", self)
+        self.deleteDisplayAction.triggered.connect(self.createDisplayPressed)
+        self.deleteDisplayAction.setEnabled(False)
+
+        self.startVNCAction = QAction("&Start sharing", self)
+        self.startVNCAction.triggered.connect(self.startVNCPressed)
+        self.startVNCAction.setEnabled(False)
+
+        self.stopVNCAction = QAction("S&top sharing", self)
+        self.stopVNCAction.triggered.connect(self.startVNCPressed)
+        self.stopVNCAction.setEnabled(False)
         
         self.openAction = QAction("&Open VirtScreen", self)
         self.openAction.triggered.connect(self.showNormal)
@@ -401,8 +414,11 @@ class Window(QDialog):
 
     def createTrayIcon(self):
         self.trayIconMenu = QMenu(self)
-        self.trayIconMenu.addAction(self.minimizeAction)
-        self.trayIconMenu.addAction(self.maximizeAction)
+        self.trayIconMenu.addAction(self.createDisplayAction)
+        self.trayIconMenu.addAction(self.deleteDisplayAction)
+        self.trayIconMenu.addSeparator()
+        self.trayIconMenu.addAction(self.startVNCAction)
+        self.trayIconMenu.addAction(self.stopVNCAction)
         self.trayIconMenu.addSeparator()
         self.trayIconMenu.addAction(self.openAction)
         self.trayIconMenu.addSeparator()
@@ -435,10 +451,17 @@ class Window(QDialog):
             self.startVNCButton.setText("Start VNC Server")
             self.startVNCButton.setEnabled(True)
             self.createDisplayButton.setEnabled(True)
+            self.deleteDisplayAction.setEnabled(True)
+            self.startVNCAction.setEnabled(True)
+            self.stopVNCAction.setEnabled(False)
         # Setting UI before starting
-        self.VNCMessageListWidget.clear()
+        self.createDisplayButton.setEnabled(False)
+        self.createDisplayAction.setEnabled(False)
+        self.deleteDisplayAction.setEnabled(False)
         self.startVNCButton.setEnabled(False)
         self.startVNCButton.setText("Running...")
+        self.startVNCAction.setEnabled(False)
+        self.VNCMessageListWidget.clear()
         # Run VNC server
         self.isVNCRunning = True
         self.VNCServer = ProcessProtocol(_onReceived, _onReceived, _onEnded)
@@ -451,6 +474,7 @@ class Window(QDialog):
         self.VNCMessageListWidget.setEnabled(True)
         self.startVNCButton.setEnabled(True)
         self.startVNCButton.setText("Stop Sharing")
+        self.stopVNCAction.setEnabled(True)
 
 #-------------------------------------------------------------------------------
 # Main Code
