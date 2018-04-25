@@ -85,7 +85,11 @@ class XRandR:
     def _signal_handler(self, signum=None, frame=None) -> None:
         self.delete_virtual_screen()
         os._exit(0)
-    
+
+    def get_virtual_screen(self) -> DisplayProperty:
+        self._update_virtual_screen()
+        return self.virt
+
     def set_virtual_screen(self, width, height, portrait=False, hidpi=False):
         self.virt.width = width
         self.virt.height = height
@@ -101,7 +105,8 @@ class XRandR:
         self._add_screen_mode()
         self._check_call(f"xrandr --output {self.virt.name} --mode {self.mode_name}")
         self._check_call("sleep 5")
-        self._check_call(f"xrandr --output {self.virt.name} {position} {self.primary.name}")
+        # self._check_call(f"xrandr --output {self.virt.name} {position} {self.primary.name}")
+        self._check_call(f"xrandr --output {self.virt.name} --auto")
         self._update_primary_screen()
         self._update_virtual_screen()
 
@@ -187,6 +192,7 @@ class Window(QDialog):
         self.createTrayIcon()
         self.xrandr = XRandR()
         # Additional attributes
+        self.isDisplayCreated = False
         self.isVNCRunning = False
         # Update UI
         self.update_ip_address()
@@ -197,7 +203,8 @@ class Window(QDialog):
         self.setLayout(mainLayout)
         # Events
         self.trayIcon.activated.connect(self.iconActivated)
-        self.startVNCButton.pressed.connect(self.startPressed)
+        self.createDisplayButton.pressed.connect(self.createDisplayPressed)
+        self.startVNCButton.pressed.connect(self.startVNCPressed)
         self.VNCMessageListWidget.model().rowsInserted.connect(
                                     self.VNCMessageListWidget.scrollToBottom)
         # Show
@@ -230,13 +237,39 @@ class Window(QDialog):
             event.ignore()
         else:
             QApplication.instance().quit()
-    
+
     @pyqtSlot()
-    def startPressed(self):
-        if self.isVNCRunning:
-            self.VNCServer.kill()
+    def createDisplayPressed(self):
+        if not self.isDisplayCreated:
+            # Create virtual screen
+            self.createDisplayButton.setEnabled(False)
+            width = self.displayWidthSpinBox.value()
+            height = self.displayHeightSpinBox.value()
+            portrait = self.displayPortraitCheckBox.isChecked()
+            hidpi = self.displayHIDPICheckBox.isChecked()
+            position = self.displayPositionComboBox.currentData()
+            self.xrandr.set_virtual_screen(width, height, portrait, hidpi)
+            self.xrandr.create_virtual_screen(position)
+            self.createDisplayButton.setText("Disable the virtual display")
+            self.isDisplayCreated = True
+            self.createDisplayButton.setEnabled(True)
+            self.startVNCButton.setEnabled(True)
         else:
+            # Delete the screen
+            self.createDisplayButton.setEnabled(False)
+            self.xrandr.delete_virtual_screen()
+            self.isDisplayCreated = False
+            self.createDisplayButton.setText("Create a Virtual Display")
+            self.createDisplayButton.setEnabled(True)
+            self.startVNCButton.setEnabled(False)
+        
+    @pyqtSlot()
+    def startVNCPressed(self):
+        if not self.isVNCRunning:
+            self.createDisplayButton.setEnabled(False)
             self.startVNC()
+        else:
+            self.VNCServer.kill()
 
     @pyqtSlot('QSystemTrayIcon::ActivationReason')
     def iconActivated(self, reason):
@@ -261,7 +294,7 @@ class Window(QDialog):
     def createDisplayGroupBox(self):
         self.displayGroupBox = QGroupBox("Virtual Display Settings")
 
-        # First row
+        # Position Row
         positionLabel = QLabel("Position:")
 
         self.displayPositionComboBox = QComboBox()
@@ -274,7 +307,7 @@ class Window(QDialog):
         self.displayPortraitCheckBox = QCheckBox("Portrait Mode")
         self.displayPortraitCheckBox.setChecked(False)
 
-        # Second row
+        # Resolution Row
         resolutionLabel = QLabel("Resolution:")
 
         self.displayWidthSpinBox = QSpinBox()
@@ -292,23 +325,32 @@ class Window(QDialog):
         self.displayHIDPICheckBox = QCheckBox("HiDPI (2x resolution)")
         self.displayHIDPICheckBox.setChecked(False)
 
-        # Putting them togather
-        layout = QGridLayout()
+        # Start button
+        self.createDisplayButton = QPushButton("Create a Virtual Display")
+        self.createDisplayButton.setDefault(True)
+
+        # Putting them together
+        layout = QVBoxLayout()
+
+        # Grid layout for screen settings
+        gridLayout = QGridLayout()
         # Display Position row
-        layout.addWidget(positionLabel, 0, 0)
-        layout.addWidget(self.displayPositionComboBox, 0, 1, 1, 2)
-        layout.addWidget(self.displayPortraitCheckBox, 0, 6, 1, 2, Qt.AlignLeft)
+        gridLayout.addWidget(positionLabel, 0, 0)
+        gridLayout.addWidget(self.displayPositionComboBox, 0, 1, 1, 2)
+        gridLayout.addWidget(self.displayPortraitCheckBox, 0, 6, 1, 2, Qt.AlignLeft)
         # Resolution row
-        layout.addWidget(resolutionLabel, 1, 0)
-        layout.addWidget(self.displayWidthSpinBox, 1, 1, 1, 2)
-        layout.addWidget(xLabel, 1, 3, Qt.AlignHCenter)
-        layout.addWidget(self.displayHeightSpinBox, 1, 4, 1, 2)
-        layout.addWidget(self.displayHIDPICheckBox, 1, 6, 1, 2, Qt.AlignLeft)
+        gridLayout.addWidget(resolutionLabel, 1, 0)
+        gridLayout.addWidget(self.displayWidthSpinBox, 1, 1, 1, 2)
+        gridLayout.addWidget(xLabel, 1, 3, Qt.AlignHCenter)
+        gridLayout.addWidget(self.displayHeightSpinBox, 1, 4, 1, 2)
+        gridLayout.addWidget(self.displayHIDPICheckBox, 1, 6, 1, 2, Qt.AlignLeft)
         # Set strectch
-        layout.setColumnStretch(1, 0)
-        layout.setColumnStretch(3, 0)
+        gridLayout.setColumnStretch(1, 0)
+        gridLayout.setColumnStretch(3, 0)
         # layout.setRowStretch(4, 1)
         
+        layout.addLayout(gridLayout)
+        layout.addWidget(self.createDisplayButton)
         self.displayGroupBox.setLayout(layout)
 
     def createVNCGroupBox(self):
@@ -316,7 +358,7 @@ class Window(QDialog):
 
         portLabel = QLabel("Port:")
         self.VNCPortSpinBox = QSpinBox()
-        self.VNCPortSpinBox.setRange(5900, 6000)
+        self.VNCPortSpinBox.setRange(1, 65535)
         self.VNCPortSpinBox.setValue(5900)
 
         IPLabel = QLabel("Connect a VNC client to one of:")
@@ -324,6 +366,7 @@ class Window(QDialog):
 
         self.startVNCButton = QPushButton("Start VNC Server")
         self.startVNCButton.setDefault(False)
+        self.startVNCButton.setEnabled(False)
 
         messageLabel = QLabel("Server Messages")
         self.VNCMessageListWidget = QListWidget()
@@ -388,35 +431,27 @@ class Window(QDialog):
                 self.VNCMessageListWidget.addItem(line)
         def _onEnded(exitCode):
             self.startVNCButton.setEnabled(False)
-            self.xrandr.delete_virtual_screen()
             self.isVNCRunning = False
             self.VNCMessageListWidget.setEnabled(False)
             self.startVNCButton.setText("Start VNC Server")
             self.startVNCButton.setEnabled(True)
+            self.createDisplayButton.setEnabled(True)
         # Setting UI before starting
         self.VNCMessageListWidget.clear()
         self.startVNCButton.setEnabled(False)
         self.startVNCButton.setText("Running...")
-        # Create virtual screen
-        width = self.displayWidthSpinBox.value()
-        height = self.displayHeightSpinBox.value()
-        portrait = self.displayPortraitCheckBox.isChecked()
-        hidpi = self.displayHIDPICheckBox.isChecked()
-        position = self.displayPositionComboBox.currentData()
-        self.xrandr.set_virtual_screen(width, height, portrait, hidpi)
-        self.xrandr.create_virtual_screen(position)
         # Run VNC server
         self.isVNCRunning = True
         self.VNCServer = ProcessProtocol(_onReceived, _onReceived, _onEnded)
         port = self.VNCPortSpinBox.value()
-        virt = self.xrandr.virt
+        virt = self.xrandr.get_virtual_screen()
         clip = f"{virt.width}x{virt.height}+{virt.x_offset}+{virt.y_offset}"
         arg = f"x11vnc -multiptr -repeat -rfbport {port} -clip {clip}"
         self.VNCServer.run(arg)
         # Change UI
         self.VNCMessageListWidget.setEnabled(True)
         self.startVNCButton.setEnabled(True)
-        self.startVNCButton.setText("Stop")
+        self.startVNCButton.setText("Stop Sharing")
 
 #-------------------------------------------------------------------------------
 # Main Code
