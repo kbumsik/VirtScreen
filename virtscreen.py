@@ -101,11 +101,10 @@ class XRandR:
             self.virt.height = 2 * self.virt.height
         self.mode_name = str(self.virt.width) + "x" + str(self.virt.height) + self.scrren_suffix
     
-    def create_virtual_screen(self, position) -> None:
+    def create_virtual_screen(self) -> None:
         self._add_screen_mode()
         self._check_call(f"xrandr --output {self.virt.name} --mode {self.mode_name}")
         self._check_call("sleep 5")
-        # self._check_call(f"xrandr --output {self.virt.name} {position} {self.primary.name}")
         self._check_call(f"xrandr --output {self.virt.name} --auto")
         self._update_primary_screen()
         self._update_virtual_screen()
@@ -247,9 +246,8 @@ class Window(QDialog):
             height = self.displayHeightSpinBox.value()
             portrait = self.displayPortraitCheckBox.isChecked()
             hidpi = self.displayHIDPICheckBox.isChecked()
-            position = self.displayPositionComboBox.currentData()
             self.xrandr.set_virtual_screen(width, height, portrait, hidpi)
-            self.xrandr.create_virtual_screen(position)
+            self.xrandr.create_virtual_screen()
             self.createDisplayButton.setText("Disable the virtual display")
             self.isDisplayCreated = True
             self.createDisplayButton.setEnabled(True)
@@ -294,33 +292,24 @@ class Window(QDialog):
     def createDisplayGroupBox(self):
         self.displayGroupBox = QGroupBox("Virtual Display Settings")
 
-        # Position Row
-        positionLabel = QLabel("Position:")
-
-        self.displayPositionComboBox = QComboBox()
-        self.displayPositionComboBox.addItem("Right", "--right-of")
-        self.displayPositionComboBox.addItem("Left", "--left-of")
-        self.displayPositionComboBox.addItem("Above", "--above")
-        self.displayPositionComboBox.addItem("Below", "--below")
-        self.displayPositionComboBox.setCurrentIndex(0)
-
-        self.displayPortraitCheckBox = QCheckBox("Portrait Mode")
-        self.displayPortraitCheckBox.setChecked(False)
-
         # Resolution Row
         resolutionLabel = QLabel("Resolution:")
 
         self.displayWidthSpinBox = QSpinBox()
         self.displayWidthSpinBox.setRange(640, 1920)
-        self.displayWidthSpinBox.setSuffix(" px")
+        self.displayWidthSpinBox.setSuffix("px")
         self.displayWidthSpinBox.setValue(1368)
 
         xLabel = QLabel("x")
 
         self.displayHeightSpinBox = QSpinBox()
         self.displayHeightSpinBox.setRange(360, 1080)
-        self.displayHeightSpinBox.setSuffix(" px")
+        self.displayHeightSpinBox.setSuffix("px")
         self.displayHeightSpinBox.setValue(1024)
+
+        # Portrait and HiDPI
+        self.displayPortraitCheckBox = QCheckBox("Portrait Mode")
+        self.displayPortraitCheckBox.setChecked(False)
 
         self.displayHIDPICheckBox = QCheckBox("HiDPI (2x resolution)")
         self.displayHIDPICheckBox.setChecked(False)
@@ -329,28 +318,38 @@ class Window(QDialog):
         self.createDisplayButton = QPushButton("Create a Virtual Display")
         self.createDisplayButton.setDefault(True)
 
+        # Notice Label
+        self.displayNoticeLabel = QLabel("After creating, you can adjust the display's " +
+                                "position in the Desktop Environment's settings " +
+                                "or ARandR.")
+        self.displayNoticeLabel.setWordWrap(True)
+        font = self.displayNoticeLabel.font()
+        font.setPointSize(9)
+        self.displayNoticeLabel.setFont(font)
+
         # Putting them together
         layout = QVBoxLayout()
 
         # Grid layout for screen settings
         gridLayout = QGridLayout()
-        # Display Position row
-        gridLayout.addWidget(positionLabel, 0, 0)
-        gridLayout.addWidget(self.displayPositionComboBox, 0, 1, 1, 2)
-        gridLayout.addWidget(self.displayPortraitCheckBox, 0, 6, 1, 2, Qt.AlignLeft)
         # Resolution row
-        gridLayout.addWidget(resolutionLabel, 1, 0)
-        gridLayout.addWidget(self.displayWidthSpinBox, 1, 1, 1, 2)
-        gridLayout.addWidget(xLabel, 1, 3, Qt.AlignHCenter)
-        gridLayout.addWidget(self.displayHeightSpinBox, 1, 4, 1, 2)
-        gridLayout.addWidget(self.displayHIDPICheckBox, 1, 6, 1, 2, Qt.AlignLeft)
-        # Set strectch
-        gridLayout.setColumnStretch(1, 0)
-        gridLayout.setColumnStretch(3, 0)
-        # layout.setRowStretch(4, 1)
-        
-        layout.addLayout(gridLayout)
+        rowLayout = QHBoxLayout()
+        rowLayout.addWidget(resolutionLabel)
+        rowLayout.addWidget(self.displayWidthSpinBox)
+        rowLayout.addWidget(xLabel)
+        rowLayout.addWidget(self.displayHeightSpinBox)
+        rowLayout.addStretch()
+        layout.addLayout(rowLayout)
+        # Portrait & HiDPI
+        rowLayout = QHBoxLayout()
+        rowLayout.addWidget(self.displayPortraitCheckBox)
+        rowLayout.addWidget(self.displayHIDPICheckBox)
+        rowLayout.addStretch()
+        layout.addLayout(rowLayout)
+        # Display create button and Notice label
         layout.addWidget(self.createDisplayButton)
+        layout.addWidget(self.displayNoticeLabel)
+
         self.displayGroupBox.setLayout(layout)
 
     def createVNCGroupBox(self):
