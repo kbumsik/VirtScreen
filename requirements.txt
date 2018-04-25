@@ -1,0 +1,4 @@
+PyQt5==5.10.1
+Twisted==17.9.0
+qt5reactor==0.5
+netifaces==0.10.6

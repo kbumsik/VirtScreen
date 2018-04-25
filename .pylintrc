@@ -1,0 +1,4 @@
+[MASTER]
+extension-pkg-whitelist=
+    PyQt5,
+    netifaces
