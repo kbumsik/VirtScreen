@@ -110,6 +110,11 @@ class XRandR:
         self._update_virtual_screen()
 
     def delete_virtual_screen(self) -> None:
+        try:
+            self.virt.name
+            self.mode_name
+        except AttributeError:
+            return
         self._call(f"xrandr --output {self.virt.name} --off")
         self._call(f"xrandr --delmode {self.virt.name} {self.mode_name}")
     
@@ -187,18 +192,21 @@ class Window(QDialog):
         # Create objects
         self.createDisplayGroupBox()
         self.createVNCGroupBox()
+        self.createBottomLayout()
         self.createActions()
         self.createTrayIcon()
         self.xrandr = XRandR()
         # Additional attributes
         self.isDisplayCreated = False
         self.isVNCRunning = False
+        self.isQuitProgramPending = False
         # Update UI
         self.update_ip_address()
         # Put togather
         mainLayout = QVBoxLayout()
         mainLayout.addWidget(self.displayGroupBox)
         mainLayout.addWidget(self.VNCGroupBox)
+        mainLayout.addLayout(self.bottomLayout)
         self.setLayout(mainLayout)
         # Events
         self.trayIcon.activated.connect(self.iconActivated)
@@ -206,6 +214,7 @@ class Window(QDialog):
         self.startVNCButton.pressed.connect(self.startVNCPressed)
         self.VNCMessageListWidget.model().rowsInserted.connect(
                                     self.VNCMessageListWidget.scrollToBottom)
+        self.bottomQuitButton.pressed.connect(self.quitProgram)
         # Show
         icon = QIcon("icon.png")
         self.trayIcon.setIcon(icon)
@@ -291,6 +300,16 @@ class Window(QDialog):
                 "context menu of the system tray entry.",
                 icon,
                 7 * 1000)
+
+    @pyqtSlot()
+    def quitProgram(self):
+        self.isQuitProgramPending = True
+        try:
+            # Rest of quit sequence will be handled in the callback.
+            self.VNCServer.kill()
+        except AttributeError:
+            self.xrandr.delete_virtual_screen()
+            QApplication.instance().quit()
 
     def createDisplayGroupBox(self):
         self.displayGroupBox = QGroupBox("Virtual Display Settings")
@@ -381,13 +400,27 @@ class Window(QDialog):
         portLayout.addWidget(self.VNCPortSpinBox)
         portLayout.addStretch()
         layout.addLayout(portLayout)
+        layout.addWidget(self.startVNCButton)
         layout.addWidget(IPLabel)
         layout.addWidget(self.VNCIPListWidget)
-        layout.addWidget(self.startVNCButton)
         layout.addSpacing(15)
         layout.addWidget(messageLabel)
         layout.addWidget(self.VNCMessageListWidget)
         self.VNCGroupBox.setLayout(layout)
+    
+    def createBottomLayout(self):
+        self.bottomLayout = QVBoxLayout()
+
+        # Create button
+        self.bottomQuitButton = QPushButton("Quit")
+        self.bottomQuitButton.setDefault(False)
+        self.bottomQuitButton.setEnabled(True)
+
+        # Set Overall layout
+        hLayout = QHBoxLayout()
+        hLayout.addStretch()
+        hLayout.addWidget(self.bottomQuitButton)
+        self.bottomLayout.addLayout(hLayout)
 
     def createActions(self):
         self.createDisplayAction = QAction("Create display", self)
@@ -410,7 +443,7 @@ class Window(QDialog):
         self.openAction.triggered.connect(self.showNormal)
 
         self.quitAction = QAction("&Quit", self)
-        self.quitAction.triggered.connect(QApplication.instance().quit)
+        self.quitAction.triggered.connect(self.quitProgram)
 
     def createTrayIcon(self):
         self.trayIconMenu = QMenu(self)
@@ -447,6 +480,9 @@ class Window(QDialog):
         def _onEnded(exitCode):
             self.startVNCButton.setEnabled(False)
             self.isVNCRunning = False
+            if self.isQuitProgramPending:
+                self.xrandr.delete_virtual_screen()
+                QApplication.instance().quit()
             self.VNCMessageListWidget.setEnabled(False)
             self.startVNCButton.setText("Start VNC Server")
             self.startVNCButton.setEnabled(True)
