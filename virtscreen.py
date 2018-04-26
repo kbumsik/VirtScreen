@@ -34,6 +34,25 @@ class DisplayProperty:
         self.y_offset: int
 
 #-------------------------------------------------------------------------------
+# Subprocess wrapper
+#-------------------------------------------------------------------------------
+class SubprocessWrapper:
+    def __init__(self, stdout:str=os.devnull, stderr:str=os.devnull):
+        self.stdout: str = stdout
+        self.stderr: str = stderr
+    
+    def call(self, arg) -> None:
+        with open(os.devnull, "w") as f:
+            subprocess.call(arg.split(), stdout=f, stderr=f)
+
+    def check_call(self, arg) -> None:
+        with open(os.devnull, "w") as f:
+            subprocess.check_call(arg.split(), stdout=f, stderr=f)
+    
+    def run(self, arg: str) -> str:
+        return subprocess.run(arg.split(), stdout=subprocess.PIPE).stdout.decode('utf-8')
+
+#-------------------------------------------------------------------------------
 # Screen adjustment class
 #-------------------------------------------------------------------------------
 class XRandR:
@@ -397,6 +416,10 @@ class Window(QDialog):
         self.VNCPortSpinBox.setRange(1, 65535)
         self.VNCPortSpinBox.setValue(5900)
 
+        passwordLabel = QLabel("Password:")
+        self.VNCPasswordLineEdit = QLineEdit()
+        self.VNCPasswordLineEdit.setText("")
+
         IPLabel = QLabel("Connect a VNC client to one of:")
         self.VNCIPListWidget = QListWidget()
 
@@ -406,11 +429,12 @@ class Window(QDialog):
 
         # Set Overall layout
         layout = QVBoxLayout()
-        portLayout = QHBoxLayout()
-        portLayout.addWidget(portLabel)
-        portLayout.addWidget(self.VNCPortSpinBox)
-        portLayout.addStretch()
-        layout.addLayout(portLayout)
+        rowLayout = QHBoxLayout()
+        rowLayout.addWidget(portLabel)
+        rowLayout.addWidget(self.VNCPortSpinBox)
+        rowLayout.addWidget(passwordLabel)
+        rowLayout.addWidget(self.VNCPasswordLineEdit)
+        layout.addLayout(rowLayout)
         layout.addWidget(self.startVNCButton)
         layout.addWidget(IPLabel)
         layout.addWidget(self.VNCIPListWidget)
@@ -505,6 +529,15 @@ class Window(QDialog):
         self.startVNCButton.setEnabled(False)
         self.startVNCButton.setText("Running...")
         self.startVNCAction.setEnabled(False)
+        # Set password
+        isPassword = False
+        if self.VNCPasswordLineEdit.text():
+            isPassword = True
+            p = SubprocessWrapper()
+            try:
+                p.run(f"x11vnc -storepasswd {self.VNCPasswordLineEdit.text()} {X11VNC_PASSWORD_PATH}")
+            except:
+                isPassword = False
         # Run VNC server
         self.isVNCRunning = True
         logfile = open(X11VNC_LOG_PATH, "wb")
@@ -513,6 +546,8 @@ class Window(QDialog):
         virt = self.xrandr.get_virtual_screen()
         clip = f"{virt.width}x{virt.height}+{virt.x_offset}+{virt.y_offset}"
         arg = f"x11vnc -multiptr -repeat -rfbport {port} -clip {clip}"
+        if isPassword:
+            arg += f" -rfbauth {X11VNC_PASSWORD_PATH}"
         self.VNCServer.run(arg)
         self.update_ip_address()
         # Change UI
