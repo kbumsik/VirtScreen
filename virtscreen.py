@@ -12,6 +12,10 @@ from netifaces import interfaces, ifaddresses, AF_INET
 import subprocess
 import atexit, signal
 
+# Redirect stdout to /dev/null. Uncomment it while debugging.
+import sys
+sys.stdout = open(os.devnull, "a")
+
 #-------------------------------------------------------------------------------
 # file path definitions
 #-------------------------------------------------------------------------------
@@ -26,17 +30,6 @@ PROGRAM_PATH = "."
 ICON_PATH = PROGRAM_PATH + "/icon/icon.png"
 ICON_TABLET_OFF_PATH = PROGRAM_PATH + "/icon/icon_tablet_off.png"
 ICON_TABLET_ON_PATH = PROGRAM_PATH + "/icon/icon_tablet_on.png"
-
-#-------------------------------------------------------------------------------
-# Display properties
-#-------------------------------------------------------------------------------
-class DisplayProperty:
-    def __init__(self):
-        self.name: str 
-        self.width: int
-        self.height: int
-        self.x_offset: int
-        self.y_offset: int
 
 #-------------------------------------------------------------------------------
 # Subprocess wrapper
@@ -58,10 +51,22 @@ class SubprocessWrapper:
         return subprocess.run(arg.split(), stdout=subprocess.PIPE).stdout.decode('utf-8')
 
 #-------------------------------------------------------------------------------
+# Display properties
+#-------------------------------------------------------------------------------
+class DisplayProperty:
+    def __init__(self):
+        self.name: str 
+        self.width: int
+        self.height: int
+        self.x_offset: int
+        self.y_offset: int
+
+#-------------------------------------------------------------------------------
 # Screen adjustment class
 #-------------------------------------------------------------------------------
-class XRandR:
+class XRandR(SubprocessWrapper):
     def __init__(self):
+        super(XRandR, self).__init__()
         self.mode_name: str
         self.scrren_suffix = "_virt"
         # Thoese will be created in set_virtual_screen()
@@ -71,36 +76,25 @@ class XRandR:
         self.primary = DisplayProperty()
         self._update_primary_screen()
     
-    def _call(self, arg) -> None:
-        with open(os.devnull, "w") as nulldev:
-            subprocess.call(arg.split(), stdout=nulldev, stderr=nulldev)
-
-    def _check_call(self, arg) -> None:
-        with open(os.devnull, "w") as nulldev:
-            subprocess.check_call(arg.split(), stdout=nulldev, stderr=nulldev)
-    
-    def _run(self, arg: str) -> str:
-        return subprocess.run(arg.split(), stdout=subprocess.PIPE).stdout.decode('utf-8')
-    
     def _add_screen_mode(self) -> None:
         args_addmode = f"xrandr --addmode {self.virt.name} {self.mode_name}"
         try:
-            self._check_call(args_addmode)
+            self.check_call(args_addmode)
         except subprocess.CalledProcessError:
             # When failed create mode and then add again
-            output = self._run(f"cvt {self.virt.width} {self.virt.height}")
+            output = self.run(f"cvt {self.virt.width} {self.virt.height}")
             mode = re.search(r"^.*Modeline\s*\".*\"\s*(.*)$", output, re.M).group(1)
             # Create new screen mode
-            self._check_call(f"xrandr --newmode {self.mode_name} {mode}")
+            self.check_call(f"xrandr --newmode {self.mode_name} {mode}")
             # Add mode again
-            self._check_call(args_addmode)
+            self.check_call(args_addmode)
         # After adding mode the program should delete the mode automatically on exit
         atexit.register(self.delete_virtual_screen)
         for sig in [signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT]:
             signal.signal(sig, self._signal_handler)
     
     def _update_primary_screen(self) -> None:
-        output = self._run("xrandr")
+        output = self.run("xrandr")
         match = re.search(r"^(\w*)\s+.*primary\s*(\d+)x(\d+)\+(\d+)\+(\d+).*$", output, re.M)
         self.primary.name = match.group(1)
         self.primary.width = int(match.group(2))
@@ -109,7 +103,7 @@ class XRandR:
         self.primary.y_offset = int(match.group(5))
 
     def _update_virtual_screen(self) -> None:
-        output = self._run("xrandr")
+        output = self.run("xrandr")
         match = re.search(r"^" + self.virt.name + r"\s+.*\s+(\d+)x(\d+)\+(\d+)\+(\d+).*$", output, re.M)
         self.virt.width = int(match.group(1))
         self.virt.height = int(match.group(2))
@@ -137,9 +131,9 @@ class XRandR:
     
     def create_virtual_screen(self) -> None:
         self._add_screen_mode()
-        self._check_call(f"xrandr --output {self.virt.name} --mode {self.mode_name}")
-        self._check_call("sleep 5")
-        self._check_call(f"xrandr --output {self.virt.name} --auto")
+        self.check_call(f"xrandr --output {self.virt.name} --mode {self.mode_name}")
+        self.check_call("sleep 5")
+        self.check_call(f"xrandr --output {self.virt.name} --auto")
         self._update_primary_screen()
         self._update_virtual_screen()
 
@@ -149,8 +143,8 @@ class XRandR:
             self.mode_name
         except AttributeError:
             return
-        self._call(f"xrandr --output {self.virt.name} --off")
-        self._call(f"xrandr --delmode {self.virt.name} {self.mode_name}")
+        self.call(f"xrandr --output {self.virt.name} --off")
+        self.call(f"xrandr --delmode {self.virt.name} {self.mode_name}")
     
 #-------------------------------------------------------------------------------
 # Twisted class
