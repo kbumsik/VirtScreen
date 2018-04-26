@@ -7,10 +7,20 @@ from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
         QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QMessageBox, QMenu, QPushButton, QSpinBox, QStyle, QSystemTrayIcon,
         QTextEdit, QVBoxLayout, QListWidget)
-from twisted.internet import protocol
+from twisted.internet import protocol, error
 from netifaces import interfaces, ifaddresses, AF_INET
 import subprocess
 import atexit, signal
+
+#-------------------------------------------------------------------------------
+# PATH definitions
+#-------------------------------------------------------------------------------
+HOME_PATH = os.getenv('HOME', None)
+if HOME_PATH is not None:
+    HOME_PATH = HOME_PATH + "/.virtscreen"
+X11VNC_LOG_PATH = HOME_PATH + "/x11vnc_log.txt"
+X11VNC_PASSWORD_PATH = HOME_PATH + "/x11vnc_passwd"
+CONFIG_PATH = HOME_PATH + "/config"
 
 #-------------------------------------------------------------------------------
 # Display properties
@@ -122,10 +132,11 @@ class XRandR:
 # Twisted class
 #-------------------------------------------------------------------------------
 class ProcessProtocol(protocol.ProcessProtocol):
-    def __init__(self, onOutReceived, onErrRecevied, onProcessEnded):
+    def __init__(self, onOutReceived, onErrRecevied, onProcessEnded, logfile=None):
         self.onOutReceived = onOutReceived
         self.onErrRecevied = onErrRecevied
         self.onProcessEnded = onProcessEnded
+        self.logfile = logfile
     
     def run(self, arg: str):
         """Spawn a process
@@ -149,10 +160,14 @@ class ProcessProtocol(protocol.ProcessProtocol):
     def outReceived(self, data):
         print("outReceived! with %d bytes!" % len(data))
         self.onOutReceived(data)
+        if self.logfile is not None:
+            self.logfile.write(data)
 
     def errReceived(self, data):
         print("outReceived! with %d bytes!" % len(data))
         self.onErrRecevied(data)
+        if self.logfile is not None:
+            self.logfile.write(data)
 
     def inConnectionLost(self):
         print("inConnectionLost! stdin is closed! (we probably did it)")
@@ -174,6 +189,8 @@ class ProcessProtocol(protocol.ProcessProtocol):
         print("processEnded, status", exitCode)
 
     def processEnded(self, reason):
+        if self.logfile is not None:
+            self.logfile.close()
         exitCode = reason.value.exitCode
         if exitCode is None:
             print("Unknown exit")
@@ -212,8 +229,6 @@ class Window(QDialog):
         self.trayIcon.activated.connect(self.iconActivated)
         self.createDisplayButton.pressed.connect(self.createDisplayPressed)
         self.startVNCButton.pressed.connect(self.startVNCPressed)
-        self.VNCMessageListWidget.model().rowsInserted.connect(
-                                    self.VNCMessageListWidget.scrollToBottom)
         self.bottomQuitButton.pressed.connect(self.quitProgram)
         # Show
         icon = QIcon("icon.png")
@@ -307,7 +322,7 @@ class Window(QDialog):
         try:
             # Rest of quit sequence will be handled in the callback.
             self.VNCServer.kill()
-        except AttributeError:
+        except (AttributeError, error.ProcessExitedAlready):
             self.xrandr.delete_virtual_screen()
             QApplication.instance().quit()
 
@@ -389,10 +404,6 @@ class Window(QDialog):
         self.startVNCButton.setDefault(False)
         self.startVNCButton.setEnabled(False)
 
-        messageLabel = QLabel("Server Messages")
-        self.VNCMessageListWidget = QListWidget()
-        self.VNCMessageListWidget.setEnabled(False)
-
         # Set Overall layout
         layout = QVBoxLayout()
         portLayout = QHBoxLayout()
@@ -403,9 +414,6 @@ class Window(QDialog):
         layout.addWidget(self.startVNCButton)
         layout.addWidget(IPLabel)
         layout.addWidget(self.VNCIPListWidget)
-        layout.addSpacing(15)
-        layout.addWidget(messageLabel)
-        layout.addWidget(self.VNCMessageListWidget)
         self.VNCGroupBox.setLayout(layout)
     
     def createBottomLayout(self):
@@ -476,14 +484,14 @@ class Window(QDialog):
         def _onReceived(data):
             data = data.decode("utf-8")
             for line in data.splitlines():
-                self.VNCMessageListWidget.addItem(line)
+                # TODO: Update state of the server
+                pass
         def _onEnded(exitCode):
             self.startVNCButton.setEnabled(False)
             self.isVNCRunning = False
             if self.isQuitProgramPending:
                 self.xrandr.delete_virtual_screen()
                 QApplication.instance().quit()
-            self.VNCMessageListWidget.setEnabled(False)
             self.startVNCButton.setText("Start VNC Server")
             self.startVNCButton.setEnabled(True)
             self.createDisplayButton.setEnabled(True)
@@ -497,17 +505,17 @@ class Window(QDialog):
         self.startVNCButton.setEnabled(False)
         self.startVNCButton.setText("Running...")
         self.startVNCAction.setEnabled(False)
-        self.VNCMessageListWidget.clear()
         # Run VNC server
         self.isVNCRunning = True
-        self.VNCServer = ProcessProtocol(_onReceived, _onReceived, _onEnded)
+        logfile = open(X11VNC_LOG_PATH, "wb")
+        self.VNCServer = ProcessProtocol(_onReceived, _onReceived, _onEnded, logfile)
         port = self.VNCPortSpinBox.value()
         virt = self.xrandr.get_virtual_screen()
         clip = f"{virt.width}x{virt.height}+{virt.x_offset}+{virt.y_offset}"
         arg = f"x11vnc -multiptr -repeat -rfbport {port} -clip {clip}"
         self.VNCServer.run(arg)
+        self.update_ip_address()
         # Change UI
-        self.VNCMessageListWidget.setEnabled(True)
         self.startVNCButton.setEnabled(True)
         self.startVNCButton.setText("Stop Sharing")
         self.stopVNCAction.setEnabled(True)
@@ -522,14 +530,25 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
-        QMessageBox.critical(None, "Systray",
+        QMessageBox.critical(None, "VirtScreen",
                 "I couldn't detect any system tray on this system.")
         sys.exit(1)
 
     if os.environ['XDG_SESSION_TYPE'] == 'wayland':
-        QMessageBox.critical(None, "Wayland Session",
+        QMessageBox.critical(None, "VirtScreen",
                             "Currently Wayland is not supported")
         sys.exit(1)
+    if HOME_PATH is None:
+        QMessageBox.critical(None, "VirtScreen",
+                            "VirtScreen cannot detect $HOME")
+        sys.exit(1)
+    if not os.path.exists(HOME_PATH):
+        try:
+            os.makedirs(HOME_PATH)
+        except:
+            QMessageBox.critical(None, "VirtScreen",
+                                "VirtScreen cannot create ~/.virtscreen")
+            sys.exit(1)
 
     import qt5reactor # pylint: disable=E0401
     qt5reactor.install()
