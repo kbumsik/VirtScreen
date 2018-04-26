@@ -29,3 +29,5 @@ or
 
 python virtscreen.py
 ```
+
+Note that any files related to VirtScreen, including password and log, will be stored in `~/.virtscreen` directory.
