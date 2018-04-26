@@ -13,7 +13,7 @@ import subprocess
 import atexit, signal
 
 #-------------------------------------------------------------------------------
-# PATH definitions
+# file path definitions
 #-------------------------------------------------------------------------------
 HOME_PATH = os.getenv('HOME', None)
 if HOME_PATH is not None:
@@ -21,6 +21,11 @@ if HOME_PATH is not None:
 X11VNC_LOG_PATH = HOME_PATH + "/x11vnc_log.txt"
 X11VNC_PASSWORD_PATH = HOME_PATH + "/x11vnc_passwd"
 CONFIG_PATH = HOME_PATH + "/config"
+
+PROGRAM_PATH = "."
+ICON_PATH = PROGRAM_PATH + "/icon/icon.png"
+ICON_TABLET_OFF_PATH = PROGRAM_PATH + "/icon/icon_tablet_off.png"
+ICON_TABLET_ON_PATH = PROGRAM_PATH + "/icon/icon_tablet_on.png"
 
 #-------------------------------------------------------------------------------
 # Display properties
@@ -250,9 +255,7 @@ class Window(QDialog):
         self.startVNCButton.pressed.connect(self.startVNCPressed)
         self.bottomQuitButton.pressed.connect(self.quitProgram)
         # Show
-        icon = QIcon("icon.png")
-        self.trayIcon.setIcon(icon)
-        self.setWindowIcon(icon)
+        self.setWindowIcon(self.icon)
         self.trayIcon.show()
         self.trayIcon.setToolTip("VirtScreen")
         self.setWindowTitle("VirtScreen")
@@ -295,6 +298,7 @@ class Window(QDialog):
             self.isDisplayCreated = True
             self.createDisplayButton.setEnabled(True)
             self.startVNCButton.setEnabled(True)
+            self.trayIcon.setIcon(self.icon_tablet_off)
         else:
             # Delete the screen
             self.createDisplayButton.setEnabled(False)
@@ -303,6 +307,7 @@ class Window(QDialog):
             self.createDisplayButton.setText("Create a Virtual Display")
             self.createDisplayButton.setEnabled(True)
             self.startVNCButton.setEnabled(False)
+            self.trayIcon.setIcon(self.icon)
         self.createDisplayAction.setEnabled(not self.isDisplayCreated)
         self.deleteDisplayAction.setEnabled(self.isDisplayCreated)
         self.startVNCAction.setEnabled(self.isDisplayCreated)
@@ -478,6 +483,7 @@ class Window(QDialog):
         self.quitAction.triggered.connect(self.quitProgram)
 
     def createTrayIcon(self):
+        # Menu
         self.trayIconMenu = QMenu(self)
         self.trayIconMenu.addAction(self.createDisplayAction)
         self.trayIconMenu.addAction(self.deleteDisplayAction)
@@ -489,8 +495,14 @@ class Window(QDialog):
         self.trayIconMenu.addSeparator()
         self.trayIconMenu.addAction(self.quitAction)
 
+        # Icons
+        self.icon = QIcon(ICON_PATH)
+        self.icon_tablet_off = QIcon(ICON_TABLET_OFF_PATH)
+        self.icon_tablet_on = QIcon(ICON_TABLET_ON_PATH)
+
         self.trayIcon = QSystemTrayIcon(self)
         self.trayIcon.setContextMenu(self.trayIconMenu)
+        self.trayIcon.setIcon(self.icon)
     
     def update_ip_address(self):
         self.VNCIPListWidget.clear()
@@ -522,6 +534,7 @@ class Window(QDialog):
             self.deleteDisplayAction.setEnabled(True)
             self.startVNCAction.setEnabled(True)
             self.stopVNCAction.setEnabled(False)
+            self.trayIcon.setIcon(self.icon_tablet_off)
         # Setting UI before starting
         self.createDisplayButton.setEnabled(False)
         self.createDisplayAction.setEnabled(False)
@@ -554,6 +567,7 @@ class Window(QDialog):
         self.startVNCButton.setEnabled(True)
         self.startVNCButton.setText("Stop Sharing")
         self.stopVNCAction.setEnabled(True)
+        self.trayIcon.setIcon(self.icon_tablet_on)
 
 #-------------------------------------------------------------------------------
 # Main Code
