@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import os, re
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QCursor
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
         QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
@@ -320,6 +320,15 @@ class Window(QDialog):
             if self.isVisible():
                 self.hide()
             else:
+                # move the widget to one of 4 coners of the primary display,
+                #   depending on the current mouse cursor.
+                screen = QApplication.desktop().screenGeometry()
+                x_mid = screen.width() / 2
+                y_mid = screen.height() / 2
+                cursor = QCursor().pos()
+                x = (screen.width() - self.width()) if (cursor.x() > x_mid) else 0
+                y = (screen.height() - self.height()) if (cursor.y() > y_mid) else 0
+                self.move(x, y)
                 self.showNormal()
         elif reason == QSystemTrayIcon.MiddleClick:
             self.showMessage()
