@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import os, re
-from PyQt5.QtGui import QIcon, QCursor
-from PyQt5.QtCore import pyqtSlot, Qt
+import os, re, time
+from PyQt5.QtGui import QIcon, QCursor, QFocusEvent
+from PyQt5.QtCore import pyqtSlot, Qt, QEvent
 from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
         QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QMessageBox, QMenu, QPushButton, QSpinBox, QStyle, QSystemTrayIcon,
@@ -335,12 +335,11 @@ class Window(QDialog):
 
     @pyqtSlot()
     def showMessage(self):
-        icon = QSystemTrayIcon.MessageIcon(QSystemTrayIcon.Information)
         self.trayIcon.showMessage("VirtScreen is running",
                 "The program will keep running in the system tray. To \n"
                 "terminate the program, choose \"Quit\" in the \n"
                 "context menu of the system tray entry.",
-                icon,
+                QSystemTrayIcon.MessageIcon(QSystemTrayIcon.Information),
                 7 * 1000)
 
     @pyqtSlot()
@@ -608,6 +607,8 @@ if __name__ == '__main__':
 
     QApplication.setQuitOnLastWindowClosed(False)
     window = Window()
-    window.show()
+    window.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+    time.sleep(2)   # Otherwise the trayicon message will be shown in weird position
+    window.showMessage()
     sys.exit(app.exec_())
     reactor.run()
