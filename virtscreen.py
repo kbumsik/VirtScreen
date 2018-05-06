@@ -13,8 +13,8 @@ import subprocess
 import atexit, signal
 
 # Redirect stdout to /dev/null. Uncomment it while debugging.
-import sys
-sys.stdout = open(os.devnull, "a")
+# import sys
+# sys.stdout = open(os.devnull, "a")
 
 #-------------------------------------------------------------------------------
 # file path definitions
@@ -247,6 +247,9 @@ class Window(QDialog):
         self.trayIcon.activated.connect(self.iconActivated)
         self.createDisplayButton.pressed.connect(self.createDisplayPressed)
         self.startVNCButton.pressed.connect(self.startVNCPressed)
+        QApplication.desktop().resized.connect(self.screenChanged)
+        # QApplication.desktop().resized.connect(self.startVNCPressed)
+        # QApplication.desktop().screenCountChanged.connect(self.startVNCPressed)
         self.bottomQuitButton.pressed.connect(self.quitProgram)
         # Show
         self.setWindowIcon(self.icon)
@@ -254,7 +257,7 @@ class Window(QDialog):
         self.trayIcon.setToolTip("VirtScreen")
         self.setWindowTitle("VirtScreen")
         self.resize(400, 300)
-    
+
     def setVisible(self, visible):
         """Override of setVisible(bool)
         
@@ -263,6 +266,15 @@ class Window(QDialog):
         """
         self.openAction.setEnabled(self.isMaximized() or not visible)
         super(Window, self).setVisible(visible)
+
+    def changeEvent(self, event):
+        """Override of QWidget::changeEvent()
+        
+        Arguments:
+            event {QEvent} -- QEvent
+        """
+        if event.type() == QEvent.ActivationChange and not self.isActiveWindow():
+            self.hide()
 
     def closeEvent(self, event):
         """Override of closeEvent()
@@ -332,6 +344,11 @@ class Window(QDialog):
                 self.showNormal()
         elif reason == QSystemTrayIcon.MiddleClick:
             self.showMessage()
+
+    @pyqtSlot(int)
+    def screenChanged(self, count):
+        for i in range(QApplication.desktop().screenCount()):
+            print(QApplication.desktop().availableGeometry(i))
 
     @pyqtSlot()
     def showMessage(self):
@@ -425,6 +442,7 @@ class Window(QDialog):
 
         passwordLabel = QLabel("Password:")
         self.VNCPasswordLineEdit = QLineEdit()
+        self.VNCPasswordLineEdit.setEchoMode(QLineEdit.Password)
         self.VNCPasswordLineEdit.setText("")
 
         IPLabel = QLabel("Connect a VNC client to one of:")
