@@ -195,7 +195,7 @@ ApplicationWindow {
         RowLayout {
             anchors.margins: spacing
             Label {
-                text: "VNC Server Waiting."
+                text: backend.vncState
             }
             Item { Layout.fillWidth: true }
             CheckBox {

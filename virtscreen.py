@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys, os
+from enum import Enum
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import  QObject, QUrl, Qt
@@ -19,10 +20,18 @@ ICON_TABLET_ON_PATH = PROGRAM_PATH + "/icon/icon_tablet_on.png"
 #-------------------------------------------------------------------------------
 # QML Backend class
 #-------------------------------------------------------------------------------
+class VNCState(Enum):
+    """ Enum to indicate a state of the VNC server """
+    OFF = "Off"
+    WAITING = "Waiting"
+    CONNECTED = "Connected"
+
 class Backend(QObject):
+    """ Backend class for QML frontend """
+    # Signals
     width_changed = pyqtSignal(int)
     virtScreenChanged = pyqtSignal(bool)
-    vncChanged = pyqtSignal(bool)
+    vncChanged = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(Backend, self).__init__(parent)
@@ -35,8 +44,9 @@ class Backend(QObject):
         # VNC server properties
         self._vncPort = 5900
         self._vncPassword = ""
-        self._vncState = False
-    
+        self._vncState = VNCState.OFF
+        
+    # Qt properties
     @pyqtProperty(int, notify=width_changed)
     def width(self):
         return self._width
@@ -85,6 +95,10 @@ class Backend(QObject):
         self._vncPassword = vncPassword
         print(self._vncPassword)
 
+    @pyqtProperty(str)
+    def vncState(self):
+        return self._vncState.value
+        
     # Qt Slots
     @pyqtSlot()
     def quitProgram(self):
@@ -94,7 +108,6 @@ class Backend(QObject):
 # Main Code
 #-------------------------------------------------------------------------------
 if __name__ == '__main__':
-    import sys
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon(ICON_PATH))
