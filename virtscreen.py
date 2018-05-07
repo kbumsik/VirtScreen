@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, os, subprocess, signal, re, atexit
+import sys, os, subprocess, signal, re, atexit, time
 from enum import Enum
 
 from PyQt5.QtWidgets import QApplication
@@ -141,6 +141,7 @@ class XRandR(SubprocessWrapper):
             return
         self.call(f"xrandr --output {self.virt.name} --off")
         self.call(f"xrandr --delmode {self.virt.name} {self.mode_name}")
+        atexit.unregister(self.delete_virtual_screen)
         
 #-------------------------------------------------------------------------------
 # Twisted class
@@ -174,13 +175,13 @@ class ProcessProtocol(protocol.ProcessProtocol):
         self.transport.closeStdin() # No more input
 
     def outReceived(self, data):
-        print("outReceived! with %d bytes!" % len(data))
+        # print("outReceived! with %d bytes!" % len(data))
         self.onOutReceived(data)
         if self.logfile is not None:
             self.logfile.write(data)
 
     def errReceived(self, data):
-        print("outReceived! with %d bytes!" % len(data))
+        # print("errReceived! with %d bytes!" % len(data))
         self.onErrRecevied(data)
         if self.logfile is not None:
             self.logfile.write(data)
@@ -347,6 +348,9 @@ class Backend(QObject):
     @pyqtSlot()
     def deleteVirtScreen(self):
         print("Deleting the Virtual Screen...")
+        if self.vncState != VNCState.OFF.value:
+            print("Turn off the VNC server first")
+            return
         self.xrandr.delete_virtual_screen()
         self.virtScreenCreated = False
     
@@ -368,6 +372,7 @@ class Backend(QObject):
         def _onEnded(exitCode):
             print("VNC Exited.")
             self.vncState = VNCState.OFF
+            atexit.unregister(self.stopVNC)
         # Set password
         password = False
         if self.vncPassword:
@@ -387,10 +392,15 @@ class Backend(QObject):
         if password:
             arg += f" -rfbauth {X11VNC_PASSWORD_PATH}"
         self.vncServer.run(arg)
+        # auto stop on exit
+        atexit.register(self.stopVNC, force=True)
 
     @pyqtSlot()
-    def stopVNC(self):
-        print(self.vncState)
+    def stopVNC(self, force=False):
+        if force:
+            # Usually called from atexit().
+            self.vncServer.kill()
+            time.sleep(2)   # Make sure X11VNC shutdown before execute next atexit.
         if self.vncState in (VNCState.WAITING.value, VNCState.CONNECTED.value):
             self.vncServer.kill()
         else:
