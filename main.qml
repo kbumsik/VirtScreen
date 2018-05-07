@@ -134,6 +134,13 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 // Material.background: Material.Teal
                 // Material.foreground: Material.Grey
+                onClicked: {
+                    if (!backend.virtScreenCreated) {
+                        backend.createVirtScreen();
+                    } else {
+                        backend.deleteVirtScreen();
+                    }
+                }
             }
         }
 
@@ -187,6 +194,13 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 // Material.background: Material.Teal
                 // Material.foreground: Material.Grey
+                onClicked: {
+                    if (backend.vncState == 'Off') {
+                        backend.startVNC()
+                    } else {
+                        backend.stopVNC()
+                    }
+                }
             }
         }
     }
@@ -229,7 +243,7 @@ ApplicationWindow {
         menu: Labs.Menu {
             Labs.MenuItem {
                 text: qsTr("&Quit")
-                onTriggered: Qt.quit()
+                onTriggered: backend.quitProgram()
             }
         }
     }
