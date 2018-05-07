@@ -2,6 +2,7 @@ import QtQuick 2.10
 import QtQuick.Controls 2.3
 // import QtQuick.Controls.Material 2.3
 import QtQuick.Layouts 1.3
+import QtQuick.Window 2.2
 
 import Qt.labs.platform 1.0 as Labs
 
@@ -10,7 +11,8 @@ import VirtScreen.Backend 1.0
 
 ApplicationWindow {
     id: window
-    visible: true
+    visible: false
+    flags: Qt.FramelessWindowHint
     title: "Basic layouts"
 
     // Material.theme: Material.Light
@@ -20,6 +22,14 @@ ApplicationWindow {
     width: 380
     height: 600
 
+    // hide screen when loosing focus
+    onActiveFocusItemChanged: {
+        if (!activeFocusItem) {
+            this.hide();
+        }
+    }
+
+    // virtscreen.py hackend.
     Backend {
         id: backend
     }
@@ -235,6 +245,17 @@ ApplicationWindow {
         }
 
         onActivated: {
+            if (window.visible) {
+                window.hide();
+                return;
+            }
+            // Move window to the corner of the primary display
+            var width = backend.primaryDisplayWidth;
+            var height = backend.primaryDisplayHeight;
+            var x_mid = width / 2;
+            var y_mid = height / 2;
+            window.x = (backend.cursor_x > x_mid)? width - window.width : 0;
+            window.y = (backend.cursor_y > y_mid)? height - window.height : 0;
             window.show()
             window.raise()
             window.requestActivate()

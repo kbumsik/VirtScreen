@@ -6,7 +6,7 @@ from enum import Enum
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import  QObject, QUrl, Qt
 from PyQt5.QtCore import pyqtProperty, pyqtSlot, pyqtSignal
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QCursor
 from PyQt5.QtQml import qmlRegisterType, QQmlApplicationEngine
 
 from twisted.internet import protocol, error
@@ -243,6 +243,11 @@ class Backend(QObject):
         self._vncPort = 5900
         self._vncPassword = ""
         self._vncState = VNCState.OFF
+        # Primary screen and mouse posistion
+        self._cursor_x: int
+        self._cursor_y: int
+        self._primaryDisplayWidth: int
+        self._primaryDisplayHeight: int
         # objects
         self.xrandr = XRandR()
         
@@ -305,7 +310,31 @@ class Backend(QObject):
     def vncState(self, state):
         self._vncState = state
         self.vncStateChanged.emit(self._vncState.value)
-        
+    
+    @pyqtProperty(int)
+    def cursor_x(self):
+        cursor = QCursor().pos()
+        self._cursor_x = cursor.x()
+        return self._cursor_x
+
+    @pyqtProperty(int)
+    def cursor_y(self):
+        cursor = QCursor().pos()
+        self._cursor_y = cursor.y()
+        return self._cursor_y
+
+    @pyqtProperty(int)
+    def primaryDisplayWidth(self):
+        screen = QApplication.desktop().screenGeometry()
+        self._primaryDisplayWidth = screen.width()
+        return self._primaryDisplayWidth
+
+    @pyqtProperty(int)
+    def primaryDisplayHeight(self):
+        screen = QApplication.desktop().screenGeometry()
+        self._primaryDisplayHeight = screen.height()
+        return self._primaryDisplayHeight
+    
     # Qt Slots
     @pyqtSlot()
     def createVirtScreen(self):
@@ -417,7 +446,7 @@ if __name__ == '__main__':
     engine = QQmlApplicationEngine()
     engine.load(QUrl('main.qml'))
     if not engine.rootObjects():
-        print("Failed to load qml")
-        exit(1)
+        QMessageBox.critical(None, "VirtScreen", "Failed to load qml")
+        sys.exit(1)
     sys.exit(app.exec_())
     reactor.run()
