@@ -91,12 +91,12 @@ class XRandR(SubprocessWrapper):
     
     def _update_primary_screen(self) -> None:
         output = self.run("xrandr")
-        match = re.search(r"^(\w*)\s+.*primary\s*(\d+)x(\d+)\+(\d+)\+(\d+).*$", output, re.M)
+        match = re.search(r"^(\S*)\s+(connected|disconnected)\s+primary\s+(\d+)x(\d+)\+(\d+)\+(\d+)\s+.*$", output, re.M)
         self.primary.name = match.group(1)
-        self.primary.width = int(match.group(2))
-        self.primary.height = int(match.group(3))
-        self.primary.x_offset = int(match.group(4))
-        self.primary.y_offset = int(match.group(5))
+        self.primary.width = int(match.group(3))
+        self.primary.height = int(match.group(4))
+        self.primary.x_offset = int(match.group(5))
+        self.primary.y_offset = int(match.group(6))
 
     def _update_virtual_screen(self) -> None:
         output = self.run("xrandr")
