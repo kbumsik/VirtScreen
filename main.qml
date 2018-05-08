@@ -303,8 +303,11 @@ ApplicationWindow {
         Component.onCompleted: {
             // without delay, the message appears in a wierd place 
             timer.setTimeout (function() {
-                showMessage("Message title", "Something important came up. Click this to know more.");
-            }, 1000);
+                showMessage("VirtScreen is running",
+                    "The program will keep running in the system tray.\n" +
+                    "To terminate the program, choose \"Quit\" in the \n" +
+                    "context menu of the system tray entry.");
+            }, 7000);
         }
 
         onActivated: {
