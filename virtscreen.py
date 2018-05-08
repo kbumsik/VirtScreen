@@ -2,6 +2,7 @@
 
 import sys, os, subprocess, signal, re, atexit, time
 from enum import Enum
+from typing import List
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import  QObject, QUrl, Qt
@@ -51,25 +52,43 @@ class SubprocessWrapper:
 #-------------------------------------------------------------------------------
 class DisplayProperty:
     def __init__(self):
-        self.name: str 
+        self.name: str
+        self.primary: bool
+        self.connected: bool
         self.width: int
         self.height: int
         self.x_offset: int
         self.y_offset: int
+    def __str__(self):
+        ret = f"{self.name}"
+        if self.connected:
+            ret += " connected"
+            if self.primary:
+                ret += " primary"
+            ret += f" {self.width}x{self.height}+{self.x_offset}+{self.y_offset}"
+        else:
+            ret += " disconnected"
+        return ret
 
 #-------------------------------------------------------------------------------
 # Screen adjustment class
 #-------------------------------------------------------------------------------
 class XRandR(SubprocessWrapper):
+    DEFAULT_VIRT_SCREEN = "VIRTUAL1"
+    VIRT_SCREEN_SUFFIX = "_virt"
+
     def __init__(self):
         super(XRandR, self).__init__()
         self.mode_name: str
-        self.scrren_suffix = "_virt"
+        self.scrren_suffix = self.VIRT_SCREEN_SUFFIX 
+        self.screens: List[DisplayProperty] = []
         # Thoese will be created in set_virtual_screen()
         self.virt = DisplayProperty()
-        self.virt.name = "VIRTUAL1"
+        self.virt.name = self.DEFAULT_VIRT_SCREEN
         # Primary display
-        self.primary = DisplayProperty()
+        self.primary: DisplayProperty()
+        self.primary_idx: int
+        self.virtual_idx: int
         self._update_primary_screen()
     
     def _add_screen_mode(self) -> None:
@@ -91,12 +110,29 @@ class XRandR(SubprocessWrapper):
     
     def _update_primary_screen(self) -> None:
         output = self.run("xrandr")
-        match = re.search(r"^(\S*)\s+(connected|disconnected)\s+primary\s+(\d+)x(\d+)\+(\d+)\+(\d+)\s+.*$", output, re.M)
-        self.primary.name = match.group(1)
-        self.primary.width = int(match.group(3))
-        self.primary.height = int(match.group(4))
-        self.primary.x_offset = int(match.group(5))
-        self.primary.y_offset = int(match.group(6))
+        self.screens = []
+        pattern = re.compile(r"^(\S*)\s+(connected|disconnected)\s+((primary)\s+)?"
+                        r"((\d+)x(\d+)\+(\d+)\+(\d+)\s+)?.*$", re.M)
+        for idx, match in enumerate(pattern.finditer(output)):
+            screen = DisplayProperty()
+            screen.name = match.group(1)
+            if screen.name == self.DEFAULT_VIRT_SCREEN:
+                self.virtual_idx = idx
+            screen.primary = True if match.group(4) else False
+            if screen.primary:
+                self.primary_idx = idx
+            screen.connected = True if match.group(2) == "connected" else False
+            self.screens.append(screen)
+            if not screen.connected:
+                continue
+            screen.width = int(match.group(6))
+            screen.height = int(match.group(7))
+            screen.x_offset = int(match.group(8))
+            screen.y_offset = int(match.group(9))
+        print("Display information:")
+        for s in self.screens:
+            print("\t", s)
+        self.primary = self.screens[self.primary_idx]
 
     def _update_virtual_screen(self) -> None:
         output = self.run("xrandr")
