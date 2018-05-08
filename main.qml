@@ -41,6 +41,9 @@ ApplicationWindow {
             timer.interval = delayTime;
             timer.repeat = false;
             timer.triggered.connect(cb);
+            timer.triggered.connect(function() {
+                timer.triggered.disconnect(cb);
+            });
             timer.start();
         }
     }
@@ -140,16 +143,50 @@ ApplicationWindow {
             }
 
             Button {
-                text: "Create a Virtual Display"
+                id: virtScreenButton
+                text: "Enable Virtual Screen"
                 Layout.fillWidth: true
                 // Material.background: Material.Teal
                 // Material.foreground: Material.Grey
+
+                Popup {
+                    id: busyDialog
+                    modal: true
+                    closePolicy: Popup.NoAutoClose
+
+                    x: (parent.width - width) / 2
+                    y: (parent.height - height) / 2
+
+                    BusyIndicator {
+                        x: (parent.width - width) / 2
+                        y: (parent.height - height) / 2
+                        running: true
+                    }
+                }
+
                 onClicked: {
+                    virtScreenButton.enabled = false;
+                    busyDialog.open();
+                    // Give a very short delay to show busyDialog.
+                    timer.setTimeout (function() {
                     if (!backend.virtScreenCreated) {
                         backend.createVirtScreen();
                     } else {
                         backend.deleteVirtScreen();
                     }
+                    }, 200);
+                }
+
+                Component.onCompleted: {
+                    backend.virtScreenChanged.connect(function(created) {
+                        busyDialog.close();
+                        virtScreenButton.enabled = true;
+                        if (created) {
+                            virtScreenButton.text = "Disable Virtual Screen"
+                        } else {
+                            virtScreenButton.text = "Enable Virtual Screen"
+                        }
+                    });
                 }
             }
         }

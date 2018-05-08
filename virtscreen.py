@@ -350,6 +350,7 @@ class Backend(QObject):
         print("Deleting the Virtual Screen...")
         if self.vncState != VNCState.OFF.value:
             print("Turn off the VNC server first")
+            self.virtScreenCreated = True
             return
         self.xrandr.delete_virtual_screen()
         self.virtScreenCreated = False
