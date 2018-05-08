@@ -1,6 +1,6 @@
 import QtQuick 2.10
 import QtQuick.Controls 2.3
-// import QtQuick.Controls.Material 2.3
+import QtQuick.Controls.Material 2.3
 import QtQuick.Layouts 1.3
 import QtQuick.Window 2.2
 
@@ -15,8 +15,8 @@ ApplicationWindow {
     flags: Qt.FramelessWindowHint
     title: "Basic layouts"
 
-    // Material.theme: Material.Light
-    // Material.accent: Material.Teal
+    Material.theme: Material.Light
+    Material.accent: Material.Teal
 
     property int margin: 11
     width: 380
@@ -29,7 +29,7 @@ ApplicationWindow {
         }
     }
 
-    // virtscreen.py hackend.
+    // virtscreen.py backend.
     Backend {
         id: backend
     }
@@ -169,16 +169,16 @@ ApplicationWindow {
                     busyDialog.open();
                     // Give a very short delay to show busyDialog.
                     timer.setTimeout (function() {
-                    if (!backend.virtScreenCreated) {
-                        backend.createVirtScreen();
-                    } else {
-                        backend.deleteVirtScreen();
-                    }
+                        if (!backend.virtScreenCreated) {
+                            backend.createVirtScreen();
+                        } else {
+                            backend.deleteVirtScreen();
+                        }
                     }, 200);
                 }
 
                 Component.onCompleted: {
-                    backend.virtScreenChanged.connect(function(created) {
+                    backend.onVirtScreenCreatedChanged.connect(function(created) {
                         busyDialog.close();
                         virtScreenButton.enabled = true;
                         if (created) {
@@ -237,7 +237,9 @@ ApplicationWindow {
             }
 
             Button {
+                id: vncButton
                 text: "Start VNC Server"
+                enabled: false
                 Layout.fillWidth: true
                 // Material.background: Material.Teal
                 // Material.foreground: Material.Grey
@@ -248,6 +250,23 @@ ApplicationWindow {
                         backend.stopVNC()
                     }
                 }
+
+                Component.onCompleted: {
+                    backend.onVncStateChanged.connect(function(state) {
+                        if (state == "Off") {
+                            vncButton.text = "Start VNC Server";
+                        } else {
+                            vncButton.text = "Stop VNC Server";
+                        }
+                    });
+                    backend.onVirtScreenCreatedChanged.connect(function(created) {
+                        if (created) {
+                            vncButton.enabled = true;
+                        } else {
+                            vncButton.enabled = false;
+                        }
+                    });
+                }
             }
         }
     }
@@ -256,6 +275,7 @@ ApplicationWindow {
         RowLayout {
             anchors.margins: spacing
             Label {
+                id: vncStateLabel
                 text: backend.vncState
             }
             Item { Layout.fillWidth: true }
@@ -264,6 +284,12 @@ ApplicationWindow {
                 text: "Server Enabled"
                 checked: true
             }
+        }
+
+        Component.onCompleted: {
+            backend.onVncStateChanged.connect(function(state) {
+                vncStateLabel.text = state;
+            });
         }
     }
 
@@ -293,9 +319,9 @@ ApplicationWindow {
             var y_mid = height / 2;
             window.x = (backend.cursor_x > x_mid)? width - window.width : 0;
             window.y = (backend.cursor_y > y_mid)? height - window.height : 0;
-            window.show()
-            window.raise()
-            window.requestActivate()
+            window.show();
+            window.raise();
+            window.requestActivate();
         }
 
         menu: Labs.Menu {

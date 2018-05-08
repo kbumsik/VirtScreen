@@ -229,8 +229,8 @@ class VNCState(Enum):
 class Backend(QObject):
     """ Backend class for QML frontend """
     # Signals
-    virtScreenChanged = pyqtSignal(bool)
-    vncStateChanged = pyqtSignal(str)
+    onVirtScreenCreatedChanged = pyqtSignal(bool)
+    onVncStateChanged = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(Backend, self).__init__(parent)
@@ -281,13 +281,13 @@ class Backend(QObject):
     def hidpi(self, hidpi):
         self._hidpi = hidpi
     
-    @pyqtProperty(bool)
-    def virtScreenCreated(self, notify=virtScreenChanged):
+    @pyqtProperty(bool, notify=onVirtScreenCreatedChanged)
+    def virtScreenCreated(self):
         return self._virtScreenCreated
     @virtScreenCreated.setter
     def virtScreenCreated(self, value):
         self._virtScreenCreated = value
-        self.virtScreenChanged.emit(value)
+        self.onVirtScreenCreatedChanged.emit(value)
         
     @pyqtProperty(int)
     def vncPort(self):
@@ -302,15 +302,14 @@ class Backend(QObject):
     @vncPassword.setter
     def vncPassword(self, vncPassword):
         self._vncPassword = vncPassword
-        print(self._vncPassword)
 
-    @pyqtProperty(str)
-    def vncState(self, notify=vncStateChanged):
+    @pyqtProperty(str, notify=onVncStateChanged)
+    def vncState(self):
         return self._vncState.value
     @vncState.setter
     def vncState(self, state):
         self._vncState = state
-        self.vncStateChanged.emit(self._vncState.value)
+        self.onVncStateChanged.emit(self._vncState.value)
     
     @pyqtProperty(int)
     def cursor_x(self):
@@ -361,15 +360,17 @@ class Backend(QObject):
         if not self.virtScreenCreated:
             print("Virtual Screen not crated.")
             return
+        # regex used in callbacks
+        re_connection = re.compile(r"^.*Got connection from client.*$", re.M)
         # define callbacks
         def _onConnected():
             print("VNC started.")
             self.vncState = VNCState.WAITING
         def _onReceived(data):
             data = data.decode("utf-8")
-            for line in data.splitlines():
-                # TODO: Update state of the server
-                pass
+            if (self._vncState is not VNCState.CONNECTED) and re_connection.search(data):
+                print("VNC connected.")
+                self.vncState = VNCState.CONNECTED
         def _onEnded(exitCode):
             print("VNC Exited.")
             self.vncState = VNCState.OFF
@@ -402,7 +403,7 @@ class Backend(QObject):
             # Usually called from atexit().
             self.vncServer.kill()
             time.sleep(2)   # Make sure X11VNC shutdown before execute next atexit.
-        if self.vncState in (VNCState.WAITING.value, VNCState.CONNECTED.value):
+        if self._vncState in (VNCState.WAITING, VNCState.CONNECTED):
             self.vncServer.kill()
         else:
             print("stopVNC called while it is not running")
