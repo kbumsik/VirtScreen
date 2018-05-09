@@ -84,46 +84,28 @@ class XRandR(SubprocessWrapper):
     def __init__(self):
         super(XRandR, self).__init__()
         self.mode_name: str
-        self.scrren_suffix = self.VIRT_SCREEN_SUFFIX 
         self.screens: List[DisplayProperty] = []
+        self.virt: DisplayProperty() = None
+        self.primary: DisplayProperty() = None
+        self.virt_idx: int = None
         self.primary_idx: int = None
-        self.virtual_idx: int = None
-        # Thoese will be created in set_virtual_screen()
-        self.virt = DisplayProperty()
-        self.virt.name = self.DEFAULT_VIRT_SCREEN
         # Primary display
-        self.primary: DisplayProperty()
-        self._update_primary_screen()
+        self._update_screens()
     
-    def _add_screen_mode(self) -> None:
-        args_addmode = f"xrandr --addmode {self.virt.name} {self.mode_name}"
-        try:
-            self.check_call(args_addmode)
-        except subprocess.CalledProcessError:
-            # When failed create mode and then add again
-            output = self.run(f"cvt {self.virt.width} {self.virt.height}")
-            mode = re.search(r"^.*Modeline\s*\".*\"\s*(.*)$", output, re.M).group(1)
-            # Create new screen mode
-            self.check_call(f"xrandr --newmode {self.mode_name} {mode}")
-            # Add mode again
-            self.check_call(args_addmode)
-        # After adding mode the program should delete the mode automatically on exit
-        atexit.register(self.delete_virtual_screen)
-        for sig in [signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT]:
-            signal.signal(sig, self._signal_handler)
-    
-    def _update_primary_screen(self) -> None:
+    def _update_screens(self) -> None:
         output = self.run("xrandr")
+        self.primary = None
+        self.virt = None
         self.screens = []
+        self.virt_idx = None
         self.primary_idx = None
-        self.virtual_idx = None
         pattern = re.compile(r"^(\S*)\s+(connected|disconnected)\s+((primary)\s+)?"
                         r"((\d+)x(\d+)\+(\d+)\+(\d+)\s+)?.*$", re.M)
         for idx, match in enumerate(pattern.finditer(output)):
             screen = DisplayProperty()
             screen.name = match.group(1)
             if screen.name == self.DEFAULT_VIRT_SCREEN:
-                self.virtual_idx = idx
+                self.virt_idx = idx
             screen.primary = True if match.group(4) else False
             if screen.primary:
                 self.primary_idx = idx
@@ -139,25 +121,13 @@ class XRandR(SubprocessWrapper):
         print("Display information:")
         for s in self.screens:
             print("\t", s)
+        if self.virt_idx == self.primary_idx:
+            raise RuntimeError("VIrtual screen must be selected other than the primary screen")
+        self.virt = self.screens[self.virt_idx]
         self.primary = self.screens[self.primary_idx]
 
-    def _update_virtual_screen(self) -> None:
-        output = self.run("xrandr")
-        match = re.search(r"^" + self.virt.name + r"\s+.*\s+(\d+)x(\d+)\+(\d+)\+(\d+).*$", output, re.M)
-        self.virt.width = int(match.group(1))
-        self.virt.height = int(match.group(2))
-        self.virt.x_offset = int(match.group(3))
-        self.virt.y_offset = int(match.group(4))
-
-    def _signal_handler(self, signum=None, frame=None) -> None:
-        self.delete_virtual_screen()
-        os._exit(0)
-
-    def get_virtual_screen(self) -> DisplayProperty:
-        self._update_virtual_screen()
-        return self.virt
-
-    def set_virtual_screen(self, width, height, portrait=False, hidpi=False):
+    def _add_screen_mode(self, width, height, portrait, hidpi) -> None:
+        # Set virtual screen property first
         self.virt.width = width
         self.virt.height = height
         if portrait:
@@ -166,15 +136,39 @@ class XRandR(SubprocessWrapper):
         if hidpi:
             self.virt.width = 2 * self.virt.width
             self.virt.height = 2 * self.virt.height
-        self.mode_name = str(self.virt.width) + "x" + str(self.virt.height) + self.scrren_suffix
+        self.mode_name = str(self.virt.width) + "x" + str(self.virt.height) + self.VIRT_SCREEN_SUFFIX
+        # Then create using xrandr command
+        args_addmode = f"xrandr --addmode {self.virt.name} {self.mode_name}"
+        try:
+            self.check_call(args_addmode)
+        except subprocess.CalledProcessError:
+            # When failed create mode and then add again
+            output = self.run(f"cvt {self.virt.width} {self.virt.height}")
+            mode = re.search(r"^.*Modeline\s*\".*\"\s*(.*)$", output, re.M).group(1)
+            # Create new screen mode
+            self.check_call(f"xrandr --newmode {self.mode_name} {mode}")
+            # Add mode again
+            self.check_call(args_addmode)
+        # After adding mode the program should delete the mode automatically on exit
+        atexit.register(self.delete_virtual_screen)
+        for sig in [signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT]:
+            signal.signal(sig, self._signal_handler)
+
+    def _signal_handler(self, signum=None, frame=None) -> None:
+        self.delete_virtual_screen()
+        os._exit(0)
+
+    def get_virtual_screen(self) -> DisplayProperty:
+        self._update_screens()
+        return self.virt
     
-    def create_virtual_screen(self) -> None:
-        self._add_screen_mode()
+    def create_virtual_screen(self, width, height, portrait=False, hidpi=False) -> None:
+        print("creating: ", self.virt)
+        self._add_screen_mode(width, height, portrait, hidpi)
         self.check_call(f"xrandr --output {self.virt.name} --mode {self.mode_name}")
         self.check_call("sleep 5")
         self.check_call(f"xrandr --output {self.virt.name} --auto")
-        self._update_primary_screen()
-        self._update_virtual_screen()
+        self._update_screens()
 
     def delete_virtual_screen(self) -> None:
         try:
@@ -185,6 +179,7 @@ class XRandR(SubprocessWrapper):
         self.call(f"xrandr --output {self.virt.name} --off")
         self.call(f"xrandr --delmode {self.virt.name} {self.mode_name}")
         atexit.unregister(self.delete_virtual_screen)
+        self._update_screens()
         
 #-------------------------------------------------------------------------------
 # Twisted class
@@ -382,8 +377,7 @@ class Backend(QObject):
     @pyqtSlot()
     def createVirtScreen(self):
         print("Creating a Virtual Screen...")
-        self.xrandr.set_virtual_screen(self.width, self.height, self.portrait, self.hidpi)
-        self.xrandr.create_virtual_screen()
+        self.xrandr.create_virtual_screen(self.width, self.height, self.portrait, self.hidpi)
         self.virtScreenCreated = True
         
     # Qt Slots
