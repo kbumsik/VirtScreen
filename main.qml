@@ -24,7 +24,7 @@ ApplicationWindow {
 
     // hide screen when loosing focus
     onActiveFocusItemChanged: {
-        if (!activeFocusItem) {
+        if ((!activeFocusItem) && (!sysTrayIcon.clicked)) {
             this.hide();
         }
     }
@@ -298,6 +298,7 @@ ApplicationWindow {
         id: sysTrayIcon
         iconSource: "icon/icon.png"
         visible: true
+        property bool clicked: false
 
         onMessageClicked: console.log("Message clicked")
         Component.onCompleted: {
@@ -310,11 +311,13 @@ ApplicationWindow {
             }, 7000);
         }
 
-        onActivated: {
+        onActivated: function(reason) {
+            console.log(reason);
             if (window.visible) {
                 window.hide();
                 return;
             }
+            sysTrayIcon.clicked = true;
             // Move window to the corner of the primary display
             var width = backend.primaryDisplayWidth;
             var height = backend.primaryDisplayHeight;
@@ -325,6 +328,9 @@ ApplicationWindow {
             window.show();
             window.raise();
             window.requestActivate();
+            timer.setTimeout (function() {
+                sysTrayIcon.clicked = false;
+            }, 200);
         }
 
         menu: Labs.Menu {
