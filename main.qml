@@ -320,7 +320,7 @@ ApplicationWindow {
             var height = backend.primaryDisplayHeight;
             var x_mid = width / 2;
             var y_mid = height / 2;
-            window.x = (backend.cursor_x > x_mid)? width - window.width : 0;
+            window.x = width - window.width; //(backend.cursor_x > x_mid)? width - window.width : 0;
             window.y = (backend.cursor_y > y_mid)? height - window.height : 0;
             window.show();
             window.raise();
