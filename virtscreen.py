@@ -55,6 +55,7 @@ class DisplayProperty:
         self.name: str
         self.primary: bool
         self.connected: bool
+        self.active: bool
         self.width: int
         self.height: int
         self.x_offset: int
@@ -65,7 +66,10 @@ class DisplayProperty:
             ret += " connected"
             if self.primary:
                 ret += " primary"
-            ret += f" {self.width}x{self.height}+{self.x_offset}+{self.y_offset}"
+            if self.active:
+                ret += f" {self.width}x{self.height}+{self.x_offset}+{self.y_offset}"
+            else:
+                ret += " not active"
         else:
             ret += " disconnected"
         return ret
@@ -82,13 +86,13 @@ class XRandR(SubprocessWrapper):
         self.mode_name: str
         self.scrren_suffix = self.VIRT_SCREEN_SUFFIX 
         self.screens: List[DisplayProperty] = []
+        self.primary_idx: int = None
+        self.virtual_idx: int = None
         # Thoese will be created in set_virtual_screen()
         self.virt = DisplayProperty()
         self.virt.name = self.DEFAULT_VIRT_SCREEN
         # Primary display
         self.primary: DisplayProperty()
-        self.primary_idx: int
-        self.virtual_idx: int
         self._update_primary_screen()
     
     def _add_screen_mode(self) -> None:
@@ -111,6 +115,8 @@ class XRandR(SubprocessWrapper):
     def _update_primary_screen(self) -> None:
         output = self.run("xrandr")
         self.screens = []
+        self.primary_idx = None
+        self.virtual_idx = None
         pattern = re.compile(r"^(\S*)\s+(connected|disconnected)\s+((primary)\s+)?"
                         r"((\d+)x(\d+)\+(\d+)\+(\d+)\s+)?.*$", re.M)
         for idx, match in enumerate(pattern.finditer(output)):
@@ -122,8 +128,9 @@ class XRandR(SubprocessWrapper):
             if screen.primary:
                 self.primary_idx = idx
             screen.connected = True if match.group(2) == "connected" else False
+            screen.active = True if match.group(5) else False
             self.screens.append(screen)
-            if not screen.connected:
+            if not screen.connected or not screen.active:
                 continue
             screen.width = int(match.group(6))
             screen.height = int(match.group(7))
