@@ -6,6 +6,7 @@ import QtQuick.Window 2.2
 
 import Qt.labs.platform 1.0 as Labs
 
+import VirtScreen.DisplayProperty 1.0
 import VirtScreen.Backend 1.0
 
 
@@ -32,6 +33,10 @@ ApplicationWindow {
     // virtscreen.py backend.
     Backend {
         id: backend
+    }
+
+    DisplayProperty {
+        id: display
     }
 
     // Timer object and function
@@ -86,16 +91,13 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Label { text: "Width"; Layout.fillWidth: true }
                         SpinBox {
-                            value: backend.width
+                            value: backend.virt.width
                             from: 640
                             to: 1920
                             stepSize: 1
                             editable: true
-                            textFromValue: function(value, locale) {
-                                return Number(value).toLocaleString(locale, 'f', 0) + " px";
-                            }
                             onValueModified: {
-                                backend.width = value;
+                                backend.virt.width = value;
                             }
                         }
                     }
@@ -104,16 +106,13 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Label { text: "Height"; Layout.fillWidth: true }
                         SpinBox {
-                            value: backend.height
+                            value: backend.virt.height
                             from: 360
                             to: 1080
                             stepSize : 1
                             editable: true
-                            textFromValue: function(value, locale) {
-                                return Number(value).toLocaleString(locale, 'f', 0) + " px";
-                            }
                             onValueModified: {
-                                backend.height = value;
+                                backend.virt.height = value;
                             }
                         }
                     }
@@ -322,8 +321,9 @@ ApplicationWindow {
             }
             sysTrayIcon.clicked = true;
             // Move window to the corner of the primary display
-            var width = backend.primaryDisplayWidth;
-            var height = backend.primaryDisplayHeight;
+            var primary = backend.primary;
+            var width = primary.width;
+            var height = primary.height;
             var x_mid = width / 2;
             var y_mid = height / 2;
             window.x = width - window.width; //(backend.cursor_x > x_mid)? width - window.width : 0;

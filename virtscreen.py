@@ -50,16 +50,17 @@ class SubprocessWrapper:
 #-------------------------------------------------------------------------------
 # Display properties
 #-------------------------------------------------------------------------------
-class DisplayProperty:
-    def __init__(self):
-        self.name: str
-        self.primary: bool
-        self.connected: bool
-        self.active: bool
-        self.width: int
-        self.height: int
-        self.x_offset: int
-        self.y_offset: int
+class DisplayProperty(QObject):
+    def __init__(self, parent=None):
+        super(DisplayProperty, self).__init__(parent)
+        self._name: str
+        self._primary: bool
+        self._connected: bool
+        self._active: bool
+        self._width: int
+        self._height: int
+        self._x_offset: int
+        self._y_offset: int
     def __str__(self):
         ret = f"{self.name}"
         if self.connected:
@@ -73,6 +74,62 @@ class DisplayProperty:
         else:
             ret += " disconnected"
         return ret
+    
+    @pyqtProperty(str)
+    def name(self):
+        return self._name
+    @name.setter
+    def name(self, name):
+        self._name = name
+
+    @pyqtProperty(bool)
+    def primary(self):
+        return self._primary
+    @primary.setter
+    def primary(self, primary):
+        self._primary = primary
+
+    @pyqtProperty(bool)
+    def connected(self):
+        return self._connected
+    @connected.setter
+    def connected(self, connected):
+        self._connected = connected
+
+    @pyqtProperty(bool)
+    def active(self):
+        return self._active
+    @active.setter
+    def active(self, active):
+        self._active = active
+
+    @pyqtProperty(int)
+    def width(self):
+        return self._width
+    @width.setter
+    def width(self, width):
+        self._width = width
+
+    @pyqtProperty(int)
+    def height(self):
+        return self._height
+    @height.setter
+    def height(self, height):
+        self._height = height
+
+    @pyqtProperty(int)
+    def x_offset(self):
+        return self._x_offset
+    @x_offset.setter
+    def x_offset(self, x_offset):
+        self._x_offset = x_offset
+
+    @pyqtProperty(int)
+    def y_offset(self):
+        return self._y_offset
+    @y_offset.setter
+    def y_offset(self, y_offset):
+        self._y_offset = y_offset
 
 #-------------------------------------------------------------------------------
 # Screen adjustment class
@@ -157,6 +214,10 @@ class XRandR(SubprocessWrapper):
     def _signal_handler(self, signum=None, frame=None) -> None:
         self.delete_virtual_screen()
         os._exit(0)
+
+    def get_primary_screen(self) -> DisplayProperty:
+        self._update_screens()
+        return self.primary
 
     def get_virtual_screen(self) -> DisplayProperty:
         self._update_screens()
@@ -272,9 +333,12 @@ class Backend(QObject):
 
     def __init__(self, parent=None):
         super(Backend, self).__init__(parent)
+        # objects
+        self.xrandr = XRandR()
         # Virtual screen properties
-        self._width = 1368
-        self._height = 1024
+        self._virt = DisplayProperty()
+        self.virt.width = 1368
+        self.virt.height = 1024
         self._portrait = False
         self._hidpi = False
         self._virtScreenCreated = False
@@ -283,27 +347,17 @@ class Backend(QObject):
         self._vncPassword = ""
         self._vncState = VNCState.OFF
         # Primary screen and mouse posistion
+        self._primary: DisplayProperty() = self.xrandr.get_primary_screen()
         self._cursor_x: int
         self._cursor_y: int
-        self._primaryDisplayWidth: int
-        self._primaryDisplayHeight: int
-        # objects
-        self.xrandr = XRandR()
         
     # Qt properties
-    @pyqtProperty(int)
-    def width(self):
-        return self._width
-    @width.setter
-    def width(self, width):
-        self._width = width
-    
-    @pyqtProperty(int)
-    def height(self):
-        return self._height
-    @height.setter
-    def height(self, height):
-        self._height = height
+    @pyqtProperty(DisplayProperty)
+    def virt(self):
+        return self._virt
+    @virt.setter
+    def virt(self, virt):
+        self._virt = virt
 
     @pyqtProperty(bool)
     def portrait(self):
@@ -349,6 +403,11 @@ class Backend(QObject):
         self._vncState = state
         self.onVncStateChanged.emit(self._vncState.value)
     
+    @pyqtProperty(DisplayProperty)
+    def primary(self):
+        self._primary = self.xrandr.get_primary_screen()
+        return self._primary
+
     @pyqtProperty(int)
     def cursor_x(self):
         cursor = QCursor().pos()
@@ -360,27 +419,14 @@ class Backend(QObject):
         cursor = QCursor().pos()
         self._cursor_y = cursor.y()
         return self._cursor_y
-
-    @pyqtProperty(int)
-    def primaryDisplayWidth(self):
-        screen = QApplication.desktop().screenGeometry()
-        self._primaryDisplayWidth = screen.width()
-        return self._primaryDisplayWidth
-
-    @pyqtProperty(int)
-    def primaryDisplayHeight(self):
-        screen = QApplication.desktop().screenGeometry()
-        self._primaryDisplayHeight = screen.height()
-        return self._primaryDisplayHeight
     
     # Qt Slots
     @pyqtSlot()
     def createVirtScreen(self):
         print("Creating a Virtual Screen...")
-        self.xrandr.create_virtual_screen(self.width, self.height, self.portrait, self.hidpi)
+        self.xrandr.create_virtual_screen(self.virt.width, self.virt.height, self.portrait, self.hidpi)
         self.virtScreenCreated = True
         
-    # Qt Slots
     @pyqtSlot()
     def deleteVirtScreen(self):
         print("Deleting the Virtual Screen...")
@@ -489,6 +535,7 @@ if __name__ == '__main__':
     
     # Register the Python type.  Its URI is 'People', it's v1.0 and the type
     # will be called 'Person' in QML.
+    qmlRegisterType(DisplayProperty, 'VirtScreen.DisplayProperty', 1, 0, 'DisplayProperty')
     qmlRegisterType(Backend, 'VirtScreen.Backend', 1, 0, 'Backend')
 
     # Create a component factory and load the QML script.
