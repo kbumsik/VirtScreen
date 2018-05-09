@@ -308,11 +308,14 @@ ApplicationWindow {
                     "The program will keep running in the system tray.\n" +
                     "To terminate the program, choose \"Quit\" in the \n" +
                     "context menu of the system tray entry.");
-            }, 7000);
+            }, 1500);
         }
 
         onActivated: function(reason) {
             console.log(reason);
+            if (reason == Labs.SystemTrayIcon.Context) {
+                return;
+            }
             if (window.visible) {
                 window.hide();
                 return;
