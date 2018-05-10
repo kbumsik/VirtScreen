@@ -138,6 +138,32 @@ ApplicationWindow {
                             }
                         }
                     }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Label { text: "Device"; Layout.fillWidth: true }
+                        ComboBox {
+                            id: deviceComboBox
+                            textRole: "name"
+                            model: []
+                            
+                            Component.onCompleted: {
+                                var screens = backend.screens;
+                                var list = [];
+                                for (var i = 0; i < screens.length; i++) {
+                                    list.push(screens[i]);
+                                }
+                                deviceComboBox.model = list;
+                            }
+                            delegate: ItemDelegate {
+                                width: deviceComboBox.width
+                                text: modelData.name
+                                font.weight: deviceComboBox.currentIndex === index ? Font.DemiBold : Font.Normal
+                                highlighted: ListView.isCurrentItem
+                                enabled: modelData.connected? false: true
+                            }
+                        }
+                    }
                 }
             }
 

@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import  QObject, QUrl, Qt
 from PyQt5.QtCore import pyqtProperty, pyqtSlot, pyqtSignal
 from PyQt5.QtGui import QIcon, QCursor
-from PyQt5.QtQml import qmlRegisterType, QQmlApplicationEngine
+from PyQt5.QtQml import qmlRegisterType, QQmlApplicationEngine, QQmlListProperty
 
 from twisted.internet import protocol, error
 from netifaces import interfaces, ifaddresses, AF_INET
@@ -342,6 +342,7 @@ class Backend(QObject):
         self._portrait = False
         self._hidpi = False
         self._virtScreenCreated = False
+        self._screens: List[DisplayProperty] = self.xrandr.screens
         # VNC server properties
         self._vncPort = 5900
         self._vncPassword = ""
@@ -381,6 +382,10 @@ class Backend(QObject):
         self._virtScreenCreated = value
         self.onVirtScreenCreatedChanged.emit(value)
         
+    @pyqtProperty(QQmlListProperty)
+    def screens(self):
+        return QQmlListProperty(DisplayProperty, self, self._screens)
+
     @pyqtProperty(int)
     def vncPort(self):
         return self._vncPort
