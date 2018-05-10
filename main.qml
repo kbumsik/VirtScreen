@@ -73,22 +73,24 @@ ApplicationWindow {
         currentIndex: tabBar.currentIndex
 
         ColumnLayout {
-            // enabled: enabler.checked
-            // anchors.top: parent.top
-            // anchors.left: parent.left
-            // anchors.right: parent.right
-            // anchors.margins: margin
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.margins: margin
             
             GroupBox {
                 title: "Virtual Display"
                 // font.bold: true
-                Layout.fillWidth: true
+                anchors.left: parent.left
+                anchors.right: parent.right
+
+                enabled: backend.virtScreenCreated ? false : true
                 
                 ColumnLayout {
-                    Layout.fillWidth: true
+                    anchors.left: parent.left
+                    anchors.right: parent.right
 
                     RowLayout {
-                        Layout.fillWidth: true
                         Label { text: "Width"; Layout.fillWidth: true }
                         SpinBox {
                             value: backend.virt.width
@@ -99,11 +101,11 @@ ApplicationWindow {
                             onValueModified: {
                                 backend.virt.width = value;
                             }
+                            textFromValue: function(value, locale) { return value; }
                         }
                     }
 
                     RowLayout {
-                        Layout.fillWidth: true
                         Label { text: "Height"; Layout.fillWidth: true }
                         SpinBox {
                             value: backend.virt.height
@@ -114,11 +116,11 @@ ApplicationWindow {
                             onValueModified: {
                                 backend.virt.height = value;
                             }
+                            textFromValue: function(value, locale) { return value; }
                         }
                     }
 
                     RowLayout {
-                        Layout.fillWidth: true
                         Label { text: "Portrait Mode"; Layout.fillWidth: true }
                         Switch {
                             checked: backend.portrait
@@ -129,7 +131,6 @@ ApplicationWindow {
                     }
 
                     RowLayout {
-                        Layout.fillWidth: true
                         Label { text: "HiDPI (2x resolution)"; Layout.fillWidth: true }
                         Switch {
                             checked: backend.hidpi
@@ -140,10 +141,16 @@ ApplicationWindow {
                     }
 
                     RowLayout {
-                        Layout.fillWidth: true
-                        Label { text: "Device"; Layout.fillWidth: true }
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+
+                        Label { id: deviceLabel; text: "Device"; }
                         ComboBox {
                             id: deviceComboBox
+                            anchors.left: deviceLabel.right
+                            anchors.right: parent.right
+                            anchors.leftMargin: 120
+
                             textRole: "name"
                             model: []
                             
@@ -175,10 +182,13 @@ ApplicationWindow {
 
             Button {
                 id: virtScreenButton
-                text: "Enable Virtual Screen"
-                Layout.fillWidth: true
+                text: backend.virtScreenCreated ? "Disable Virtual Screen" : "Enable Virtual Screen"
+
+                anchors.left: parent.left
+                anchors.right: parent.right
                 // Material.background: Material.Teal
                 // Material.foreground: Material.Grey
+                enabled: backend.vncState == Backend.OFF ? true : false
 
                 Popup {
                     id: busyDialog
@@ -196,7 +206,6 @@ ApplicationWindow {
                 }
 
                 onClicked: {
-                    virtScreenButton.enabled = false;
                     busyDialog.open();
                     // Give a very short delay to show busyDialog.
                     timer.setTimeout (function() {
@@ -211,33 +220,27 @@ ApplicationWindow {
                 Component.onCompleted: {
                     backend.onVirtScreenCreatedChanged.connect(function(created) {
                         busyDialog.close();
-                        virtScreenButton.enabled = true;
-                        if (created) {
-                            virtScreenButton.text = "Disable Virtual Screen"
-                        } else {
-                            virtScreenButton.text = "Enable Virtual Screen"
-                        }
                     });
                 }
             }
         }
 
         ColumnLayout {
-            // enabled: enabler.checked
-            // anchors.top: parent.top
-            // anchors.left: parent.left
-            // anchors.right: parent.right
-            // anchors.margins: margin
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.margins: margin
 
             GroupBox {
                 title: "VNC Server"
-                Layout.fillWidth: true
-                // Layout.fillWidth: true
+                anchors.left: parent.left
+                anchors.right: parent.right
+
                 ColumnLayout {
-                    Layout.fillWidth: true
+                    anchors.left: parent.left
+                    anchors.right: parent.right
 
                     RowLayout {
-                        Layout.fillWidth: true
                         Label { text: "Port"; Layout.fillWidth: true }
                         SpinBox {
                             value: backend.vncPort
@@ -248,14 +251,20 @@ ApplicationWindow {
                             onValueModified: {
                                 backend.vncPort = value;
                             }
+                            textFromValue: function(value, locale) { return value; }
                         }
                     }
 
                     RowLayout {
-                        Layout.fillWidth: true
-                        Label { text: "Password" }
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+
+                        Label { id: passwordLabel; text: "Password" }
                         TextField {
-                            Layout.fillWidth: true
+                            anchors.left: passwordLabel.right
+                            anchors.right: parent.right
+                            anchors.margins: margin
+
                             placeholderText: "Password";
                             text: backend.vncPassword;
                             echoMode: TextInput.Password;
@@ -269,45 +278,30 @@ ApplicationWindow {
 
             Button {
                 id: vncButton
-                text: "Start VNC Server"
-                enabled: false
-                Layout.fillWidth: true
+                anchors.left: parent.left
+                anchors.right: parent.right
+
+                text: backend.vncState == Backend.OFF ? "Start VNC Server" : "Stop VNC Server"
+                enabled: backend.virtScreenCreated ? true : false
                 // Material.background: Material.Teal
                 // Material.foreground: Material.Grey
-                onClicked: {
-                    if (backend.vncState == Backend.OFF) {
-                        backend.startVNC()
-                    } else {
-                        backend.stopVNC()
-                    }
-                }
-
-                Component.onCompleted: {
-                    backend.onVncStateChanged.connect(function(state) {
-                        if (state == Backend.OFF) {
-                            vncButton.text = "Start VNC Server";
-                        } else {
-                            vncButton.text = "Stop VNC Server";
-                        }
-                    });
-                    backend.onVirtScreenCreatedChanged.connect(function(created) {
-                        if (created) {
-                            vncButton.enabled = true;
-                        } else {
-                            vncButton.enabled = false;
-                        }
-                    });
-                }
+                onClicked: backend.vncState == Backend.OFF ? backend.startVNC() : backend.stopVNC()
             }
         }
     }
 
     footer: ToolBar {
         RowLayout {
-            anchors.margins: spacing
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.margins: margin
+            
             Label {
                 id: vncStateLabel
-                text: backend.vncState
+                text: backend.vncState == Backend.OFF ? "Off" :
+                      backend.vncState == Backend.WAITING ? "Waiting" :
+                      backend.vncState == Backend.CONNECTED ? "Connected" :
+                      "Server state error!"
             }
             Item { Layout.fillWidth: true }
             CheckBox {
