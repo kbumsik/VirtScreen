@@ -467,6 +467,9 @@ class Backend(QObject):
         if not self.virtScreenCreated:
             print("Virtual Screen not crated.")
             return
+        if self.vncState is not Backend.VNCState.OFF:
+            print("VNC Server is already running.")
+            return
         # regex used in callbacks
         re_connection = re.compile(r"^.*Got connection from client.*$", re.M)
         # define callbacks

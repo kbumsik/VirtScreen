@@ -21,7 +21,7 @@ ApplicationWindow {
 
     property int margin: 11
     width: 380
-    height: 600
+    height: 500
 
     // hide screen when loosing focus
     onActiveFocusItemChanged: {
@@ -34,9 +34,20 @@ ApplicationWindow {
     Backend {
         id: backend
     }
+    property bool vncAutoStart: false
 
-    DisplayProperty {
-        id: display
+    function switchVNC(value) {
+        if (value) {
+            backend.startVNC();
+        }
+    }
+    
+    onVncAutoStartChanged: {
+        if (vncAutoStart) {
+            backend.onVirtScreenCreatedChanged.connect(switchVNC);
+        } else {
+            backend.onVirtScreenCreatedChanged.disconnect(switchVNC);
+        }
     }
 
     // Timer object and function
@@ -149,7 +160,7 @@ ApplicationWindow {
                             id: deviceComboBox
                             anchors.left: deviceLabel.right
                             anchors.right: parent.right
-                            anchors.leftMargin: 120
+                            anchors.leftMargin: 100
 
                             textRole: "name"
                             model: backend.screens
@@ -179,7 +190,8 @@ ApplicationWindow {
                 anchors.right: parent.right
                 // Material.background: Material.Teal
                 // Material.foreground: Material.Grey
-                enabled: backend.vncState == Backend.OFF ? true : false
+                enabled: window.vncAutoStart ? true :
+                         backend.vncState == Backend.OFF ? true : false
 
                 Popup {
                     id: busyDialog
@@ -203,7 +215,23 @@ ApplicationWindow {
                         if (!backend.virtScreenCreated) {
                             backend.createVirtScreen();
                         } else {
-                            backend.deleteVirtScreen();
+                            function autoOff() {
+                                console.log("autoOff called here", backend.vncState);
+                                if (backend.vncState == Backend.OFF) {
+                                    console.log("Yes. Delete it");
+                                    backend.deleteVirtScreen();
+                                }
+                            }
+
+                            if (window.vncAutoStart && (backend.vncState != Backend.OFF)) {
+                                backend.onVncStateChanged.connect(autoOff);
+                                backend.onVncStateChanged.connect(function() {
+                                    backend.onVncStateChanged.disconnect(autoOff);
+                                });
+                                backend.stopVNC();
+                            } else {
+                                backend.deleteVirtScreen();
+                            }
                         }
                     }, 200);
                 }
@@ -226,6 +254,8 @@ ApplicationWindow {
                 title: "VNC Server"
                 anchors.left: parent.left
                 anchors.right: parent.right
+
+                enabled: backend.vncState == Backend.OFF ? true : false
 
                 ColumnLayout {
                     anchors.left: parent.left
@@ -271,12 +301,33 @@ ApplicationWindow {
                 id: vncButton
                 anchors.left: parent.left
                 anchors.right: parent.right
+                anchors.bottomMargin: 0
 
-                text: backend.vncState == Backend.OFF ? "Start VNC Server" : "Stop VNC Server"
-                enabled: backend.virtScreenCreated ? true : false
+                text: window.vncAutoStart ? "Auto start enabled" : 
+                      backend.vncState == Backend.OFF ? "Start VNC Server" : "Stop VNC Server"
+                enabled: window.vncAutoStart ? false : 
+                         backend.virtScreenCreated ? true : false
                 // Material.background: Material.Teal
                 // Material.foreground: Material.Grey
                 onClicked: backend.vncState == Backend.OFF ? backend.startVNC() : backend.stopVNC()
+            }
+
+            RowLayout {
+                anchors.top: vncButton.top
+                anchors.right: parent.right
+                anchors.topMargin: vncButton.height - 10
+
+                Label { text: "Auto start"; }
+                Switch {
+                    checked: window.vncAutoStart
+                    onCheckedChanged: {
+                        if ((checked == true) && (backend.vncState == Backend.OFF) && 
+                                backend.virtScreenCreated) {
+                            backend.startVNC();
+                        }
+                        window.vncAutoStart = checked;
+                    }
+                }
             }
 
             ListView {
@@ -294,23 +345,23 @@ ApplicationWindow {
     }
 
     footer: ToolBar {
+        font.weight: Font.Medium
+        font.pointSize: 11 //parent.font.pointSize + 1
+
         RowLayout {
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.margins: margin
+            anchors.leftMargin: margin + 10
             
             Label {
                 id: vncStateLabel
-                text: backend.vncState == Backend.OFF ? "Off" :
-                      backend.vncState == Backend.WAITING ? "Waiting" :
-                      backend.vncState == Backend.CONNECTED ? "Connected" :
+                text: !backend.virtScreenCreated ? "Enable Virtual Screen first." :
+                      backend.vncState == Backend.OFF ? "Turn on VNC Server in the VNC tab." :
+                      backend.vncState == Backend.WAITING ? "VNC Server is waiting for a client..." :
+                      backend.vncState == Backend.CONNECTED ? "Connected." :
                       "Server state error!"
-            }
-            Item { Layout.fillWidth: true }
-            CheckBox {
-                id: enabler
-                text: "Server Enabled"
-                checked: true
             }
         }
     }
