@@ -1,20 +1,16 @@
 #!/usr/bin/env python
 
-import os, re, time
-from PyQt5.QtGui import QIcon, QCursor, QFocusEvent
-from PyQt5.QtCore import pyqtSlot, Qt, QEvent
-from PyQt5.QtWidgets import (QAction, QApplication, QCheckBox, QComboBox,
-        QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-        QMessageBox, QMenu, QPushButton, QSpinBox, QStyle, QSystemTrayIcon,
-        QTextEdit, QVBoxLayout, QListWidget)
+import sys, os, subprocess, signal, re, atexit, time
+from enum import Enum
+from typing import List
+
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import  QObject, QUrl, Qt, pyqtProperty, pyqtSlot, pyqtSignal, Q_ENUMS
+from PyQt5.QtGui import QIcon, QCursor
+from PyQt5.QtQml import qmlRegisterType, QQmlApplicationEngine, QQmlListProperty
+
 from twisted.internet import protocol, error
 from netifaces import interfaces, ifaddresses, AF_INET
-import subprocess
-import atexit, signal
-
-# Redirect stdout to /dev/null. Uncomment it while debugging.
-# import sys
-# sys.stdout = open(os.devnull, "a")
 
 #-------------------------------------------------------------------------------
 # file path definitions
@@ -53,30 +49,150 @@ class SubprocessWrapper:
 #-------------------------------------------------------------------------------
 # Display properties
 #-------------------------------------------------------------------------------
-class DisplayProperty:
-    def __init__(self):
-        self.name: str 
-        self.width: int
-        self.height: int
-        self.x_offset: int
-        self.y_offset: int
+class DisplayProperty(QObject):
+    def __init__(self, parent=None):
+        super(DisplayProperty, self).__init__(parent)
+        self._name: str
+        self._primary: bool
+        self._connected: bool
+        self._active: bool
+        self._width: int
+        self._height: int
+        self._x_offset: int
+        self._y_offset: int
+    def __str__(self):
+        ret = f"{self.name}"
+        if self.connected:
+            ret += " connected"
+        else:
+            ret += " disconnected"
+        if self.primary:
+            ret += " primary"
+        if self.active:
+            ret += f" {self.width}x{self.height}+{self.x_offset}+{self.y_offset}"
+        else:
+            ret += " not active"
+        return ret
+    
+    @pyqtProperty(str, constant=True)
+    def name(self):
+        return self._name
+    @name.setter
+    def name(self, name):
+        self._name = name
+
+    @pyqtProperty(bool, constant=True)
+    def primary(self):
+        return self._primary
+    @primary.setter
+    def primary(self, primary):
+        self._primary = primary
+
+    @pyqtProperty(bool, constant=True)
+    def connected(self):
+        return self._connected
+    @connected.setter
+    def connected(self, connected):
+        self._connected = connected
+
+    @pyqtProperty(bool, constant=True)
+    def active(self):
+        return self._active
+    @active.setter
+    def active(self, active):
+        self._active = active
+
+    @pyqtProperty(int, constant=True)
+    def width(self):
+        return self._width
+    @width.setter
+    def width(self, width):
+        self._width = width
+
+    @pyqtProperty(int, constant=True)
+    def height(self):
+        return self._height
+    @height.setter
+    def height(self, height):
+        self._height = height
+
+    @pyqtProperty(int, constant=True)
+    def x_offset(self):
+        return self._x_offset
+    @x_offset.setter
+    def x_offset(self, x_offset):
+        self._x_offset = x_offset
+
+    @pyqtProperty(int, constant=True)
+    def y_offset(self):
+        return self._y_offset
+    @y_offset.setter
+    def y_offset(self, y_offset):
+        self._y_offset = y_offset
 
 #-------------------------------------------------------------------------------
 # Screen adjustment class
 #-------------------------------------------------------------------------------
 class XRandR(SubprocessWrapper):
+    DEFAULT_VIRT_SCREEN = "VIRTUAL1"
+    VIRT_SCREEN_SUFFIX = "_virt"
+
     def __init__(self):
         super(XRandR, self).__init__()
         self.mode_name: str
-        self.scrren_suffix = "_virt"
-        # Thoese will be created in set_virtual_screen()
-        self.virt = DisplayProperty()
-        self.virt.name = "VIRTUAL1"
+        self.screens: List[DisplayProperty] = []
+        self.virt: DisplayProperty() = None
+        self.primary: DisplayProperty() = None
+        self.virt_idx: int = None
+        self.primary_idx: int = None
         # Primary display
-        self.primary = DisplayProperty()
-        self._update_primary_screen()
+        self._update_screens()
     
-    def _add_screen_mode(self) -> None:
+    def _update_screens(self) -> None:
+        output = self.run("xrandr")
+        self.primary = None
+        self.virt = None
+        self.screens = []
+        self.primary_idx = None
+        pattern = re.compile(r"^(\S*)\s+(connected|disconnected)\s+((primary)\s+)?"
+                        r"((\d+)x(\d+)\+(\d+)\+(\d+)\s+)?.*$", re.M)
+        for idx, match in enumerate(pattern.finditer(output)):
+            screen = DisplayProperty()
+            screen.name = match.group(1)
+            if (self.virt_idx is None) and (screen.name == self.DEFAULT_VIRT_SCREEN):
+                self.virt_idx = idx
+            screen.primary = True if match.group(4) else False
+            if screen.primary:
+                self.primary_idx = idx
+            screen.connected = True if match.group(2) == "connected" else False
+            screen.active = True if match.group(5) else False
+            self.screens.append(screen)
+            if not screen.active:
+                continue
+            screen.width = int(match.group(6))
+            screen.height = int(match.group(7))
+            screen.x_offset = int(match.group(8))
+            screen.y_offset = int(match.group(9))
+        print("Display information:")
+        for s in self.screens:
+            print("\t", s)
+        if self.virt_idx == self.primary_idx:
+            raise RuntimeError("VIrtual screen must be selected other than the primary screen")
+        self.virt = self.screens[self.virt_idx]
+        self.primary = self.screens[self.primary_idx]
+
+    def _add_screen_mode(self, width, height, portrait, hidpi) -> None:
+        # Set virtual screen property first
+        self.virt.width = width
+        self.virt.height = height
+        if portrait:
+            self.virt.width = height
+            self.virt.height = width
+        if hidpi:
+            self.virt.width = 2 * self.virt.width
+            self.virt.height = 2 * self.virt.height
+        self.mode_name = str(self.virt.width) + "x" + str(self.virt.height) + self.VIRT_SCREEN_SUFFIX
+        # Then create using xrandr command
         args_addmode = f"xrandr --addmode {self.virt.name} {self.mode_name}"
         try:
             self.check_call(args_addmode)
@@ -92,50 +208,26 @@ class XRandR(SubprocessWrapper):
         atexit.register(self.delete_virtual_screen)
         for sig in [signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT]:
             signal.signal(sig, self._signal_handler)
-    
-    def _update_primary_screen(self) -> None:
-        output = self.run("xrandr")
-        match = re.search(r"^(\w*)\s+.*primary\s*(\d+)x(\d+)\+(\d+)\+(\d+).*$", output, re.M)
-        self.primary.name = match.group(1)
-        self.primary.width = int(match.group(2))
-        self.primary.height = int(match.group(3))
-        self.primary.x_offset = int(match.group(4))
-        self.primary.y_offset = int(match.group(5))
-
-    def _update_virtual_screen(self) -> None:
-        output = self.run("xrandr")
-        match = re.search(r"^" + self.virt.name + r"\s+.*\s+(\d+)x(\d+)\+(\d+)\+(\d+).*$", output, re.M)
-        self.virt.width = int(match.group(1))
-        self.virt.height = int(match.group(2))
-        self.virt.x_offset = int(match.group(3))
-        self.virt.y_offset = int(match.group(4))
 
     def _signal_handler(self, signum=None, frame=None) -> None:
         self.delete_virtual_screen()
         os._exit(0)
 
-    def get_virtual_screen(self) -> DisplayProperty:
-        self._update_virtual_screen()
-        return self.virt
+    def get_primary_screen(self) -> DisplayProperty:
+        self._update_screens()
+        return self.primary
 
-    def set_virtual_screen(self, width, height, portrait=False, hidpi=False):
-        self.virt.width = width
-        self.virt.height = height
-        if portrait:
-            self.virt.width = height
-            self.virt.height = width
-        if hidpi:
-            self.virt.width = 2 * self.virt.width
-            self.virt.height = 2 * self.virt.height
-        self.mode_name = str(self.virt.width) + "x" + str(self.virt.height) + self.scrren_suffix
+    def get_virtual_screen(self) -> DisplayProperty:
+        self._update_screens()
+        return self.virt
     
-    def create_virtual_screen(self) -> None:
-        self._add_screen_mode()
+    def create_virtual_screen(self, width, height, portrait=False, hidpi=False) -> None:
+        print("creating: ", self.virt)
+        self._add_screen_mode(width, height, portrait, hidpi)
         self.check_call(f"xrandr --output {self.virt.name} --mode {self.mode_name}")
         self.check_call("sleep 5")
-        self.check_call(f"xrandr --output {self.virt.name} --auto")
-        self._update_primary_screen()
-        self._update_virtual_screen()
+        self.check_call(f"xrandr --output {self.virt.name} --preferred")
+        self._update_screens()
 
     def delete_virtual_screen(self) -> None:
         try:
@@ -145,12 +237,15 @@ class XRandR(SubprocessWrapper):
             return
         self.call(f"xrandr --output {self.virt.name} --off")
         self.call(f"xrandr --delmode {self.virt.name} {self.mode_name}")
-    
+        atexit.unregister(self.delete_virtual_screen)
+        self._update_screens()
+        
 #-------------------------------------------------------------------------------
 # Twisted class
 #-------------------------------------------------------------------------------
 class ProcessProtocol(protocol.ProcessProtocol):
-    def __init__(self, onOutReceived, onErrRecevied, onProcessEnded, logfile=None):
+    def __init__(self, onConnected, onOutReceived, onErrRecevied, onProcessEnded, logfile=None):
+        self.onConnected = onConnected
         self.onOutReceived = onOutReceived
         self.onErrRecevied = onErrRecevied
         self.onProcessEnded = onProcessEnded
@@ -173,16 +268,17 @@ class ProcessProtocol(protocol.ProcessProtocol):
 
     def connectionMade(self):
         print("connectionMade!")
+        self.onConnected()
         self.transport.closeStdin() # No more input
 
     def outReceived(self, data):
-        print("outReceived! with %d bytes!" % len(data))
+        # print("outReceived! with %d bytes!" % len(data))
         self.onOutReceived(data)
         if self.logfile is not None:
             self.logfile.write(data)
 
     def errReceived(self, data):
-        print("outReceived! with %d bytes!" % len(data))
+        # print("errReceived! with %d bytes!" % len(data))
         self.onErrRecevied(data)
         if self.logfile is not None:
             self.logfile.write(data)
@@ -219,313 +315,212 @@ class ProcessProtocol(protocol.ProcessProtocol):
         self.onProcessEnded(exitCode)
 
 #-------------------------------------------------------------------------------
-# Qt Window class
+# QML Backend class
 #-------------------------------------------------------------------------------
-class Window(QDialog):
-    def __init__(self):
-        super(Window, self).__init__()
-        # Create objects
-        self.createDisplayGroupBox()
-        self.createVNCGroupBox()
-        self.createBottomLayout()
-        self.createActions()
-        self.createTrayIcon()
+class Backend(QObject):
+    """ Backend class for QML frontend """
+    class VNCState:
+        """ Enum to indicate a state of the VNC server """
+        OFF = 0
+        WAITING = 1
+        CONNECTED = 2
+
+    Q_ENUMS(VNCState)
+
+    # Signals
+    onVirtScreenCreatedChanged = pyqtSignal(bool)
+    onVirtScreenIndexChanged = pyqtSignal(int)
+    onVncStateChanged = pyqtSignal(VNCState)
+    onIPAddressesChanged = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(Backend, self).__init__(parent)
+        # objects
         self.xrandr = XRandR()
-        # Additional attributes
-        self.isDisplayCreated = False
-        self.isVNCRunning = False
-        self.isQuitProgramPending = False
-        # Update UI
-        self.update_ip_address()
-        # Put togather
-        mainLayout = QVBoxLayout()
-        mainLayout.addWidget(self.displayGroupBox)
-        mainLayout.addWidget(self.VNCGroupBox)
-        mainLayout.addLayout(self.bottomLayout)
-        self.setLayout(mainLayout)
-        # Events
-        self.trayIcon.activated.connect(self.iconActivated)
-        self.createDisplayButton.pressed.connect(self.createDisplayPressed)
-        self.startVNCButton.pressed.connect(self.startVNCPressed)
-        QApplication.desktop().resized.connect(self.screenChanged)
-        # QApplication.desktop().resized.connect(self.startVNCPressed)
-        # QApplication.desktop().screenCountChanged.connect(self.startVNCPressed)
-        self.bottomQuitButton.pressed.connect(self.quitProgram)
-        # Show
-        self.setWindowIcon(self.icon)
-        self.trayIcon.show()
-        self.trayIcon.setToolTip("VirtScreen")
-        self.setWindowTitle("VirtScreen")
-        self.resize(400, 300)
-
-    def setVisible(self, visible):
-        """Override of setVisible(bool)
+        # Virtual screen properties
+        self._virt = DisplayProperty()
+        self.virt.width = 1368
+        self.virt.height = 1024
+        self._portrait = False
+        self._hidpi = False
+        self._virtScreenCreated = False
+        self._screens: List[DisplayProperty] = self.xrandr.screens
+        self._virtScreenIndex = self.xrandr.virt_idx
+        # VNC server properties
+        self._vncPort = 5900
+        self._vncPassword = ""
+        self._vncState = Backend.VNCState.OFF
+        self._ipAddresses: List[str] = []
+        self.updateIPAddresses()
+        # Primary screen and mouse posistion
+        self._primary: DisplayProperty() = self.xrandr.get_primary_screen()
+        self._cursor_x: int
+        self._cursor_y: int
         
-        Arguments:
-            visible {bool} -- true to show, false to hide
-        """
-        self.openAction.setEnabled(self.isMaximized() or not visible)
-        super(Window, self).setVisible(visible)
+    # Qt properties
+    @pyqtProperty(DisplayProperty)
+    def virt(self):
+        return self._virt
+    @virt.setter
+    def virt(self, virt):
+        self._virt = virt
 
-    def changeEvent(self, event):
-        """Override of QWidget::changeEvent()
-        
-        Arguments:
-            event {QEvent} -- QEvent
-        """
-        if event.type() == QEvent.ActivationChange and not self.isActiveWindow():
-            self.hide()
+    @pyqtProperty(bool)
+    def portrait(self):
+        return self._portrait
+    @portrait.setter
+    def portrait(self, portrait):
+        self._portrait = portrait
 
-    def closeEvent(self, event):
-        """Override of closeEvent()
-        
-        Arguments:
-            event {QCloseEvent} -- QCloseEvent
-        """
-        if self.trayIcon.isVisible():
-            self.hide()
-            self.showMessage()
-            event.ignore()
-        else:
-            QApplication.instance().quit()
-
-    @pyqtSlot()
-    def createDisplayPressed(self):
-        if not self.isDisplayCreated:
-            # Create virtual screen
-            self.createDisplayButton.setEnabled(False)
-            width = self.displayWidthSpinBox.value()
-            height = self.displayHeightSpinBox.value()
-            portrait = self.displayPortraitCheckBox.isChecked()
-            hidpi = self.displayHIDPICheckBox.isChecked()
-            self.xrandr.set_virtual_screen(width, height, portrait, hidpi)
-            self.xrandr.create_virtual_screen()
-            self.createDisplayButton.setText("Disable the virtual display")
-            self.isDisplayCreated = True
-            self.createDisplayButton.setEnabled(True)
-            self.startVNCButton.setEnabled(True)
-            self.trayIcon.setIcon(self.icon_tablet_off)
-        else:
-            # Delete the screen
-            self.createDisplayButton.setEnabled(False)
-            self.xrandr.delete_virtual_screen()
-            self.isDisplayCreated = False
-            self.createDisplayButton.setText("Create a Virtual Display")
-            self.createDisplayButton.setEnabled(True)
-            self.startVNCButton.setEnabled(False)
-            self.trayIcon.setIcon(self.icon)
-        self.createDisplayAction.setEnabled(not self.isDisplayCreated)
-        self.deleteDisplayAction.setEnabled(self.isDisplayCreated)
-        self.startVNCAction.setEnabled(self.isDisplayCreated)
-        self.stopVNCAction.setEnabled(False)
-        
-    @pyqtSlot()
-    def startVNCPressed(self):
-        if not self.isVNCRunning:
-            self.startVNC()
-        else:
-            self.VNCServer.kill()
-
-    @pyqtSlot('QSystemTrayIcon::ActivationReason')
-    def iconActivated(self, reason):
-        if reason in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick):
-            if self.isVisible():
-                self.hide()
-            else:
-                # move the widget to one of 4 coners of the primary display,
-                #   depending on the current mouse cursor.
-                screen = QApplication.desktop().screenGeometry()
-                x_mid = screen.width() / 2
-                y_mid = screen.height() / 2
-                cursor = QCursor().pos()
-                x = (screen.width() - self.width()) if (cursor.x() > x_mid) else 0
-                y = (screen.height() - self.height()) if (cursor.y() > y_mid) else 0
-                self.move(x, y)
-                self.showNormal()
-        elif reason == QSystemTrayIcon.MiddleClick:
-            self.showMessage()
-
-    @pyqtSlot(int)
-    def screenChanged(self, count):
-        for i in range(QApplication.desktop().screenCount()):
-            print(QApplication.desktop().availableGeometry(i))
-
-    @pyqtSlot()
-    def showMessage(self):
-        self.trayIcon.showMessage("VirtScreen is running",
-                "The program will keep running in the system tray. To \n"
-                "terminate the program, choose \"Quit\" in the \n"
-                "context menu of the system tray entry.",
-                QSystemTrayIcon.MessageIcon(QSystemTrayIcon.Information),
-                7 * 1000)
-
-    @pyqtSlot()
-    def quitProgram(self):
-        self.isQuitProgramPending = True
-        try:
-            # Rest of quit sequence will be handled in the callback.
-            self.VNCServer.kill()
-        except (AttributeError, error.ProcessExitedAlready):
-            self.xrandr.delete_virtual_screen()
-            QApplication.instance().quit()
-
-    def createDisplayGroupBox(self):
-        self.displayGroupBox = QGroupBox("Virtual Display Settings")
-
-        # Resolution Row
-        resolutionLabel = QLabel("Resolution:")
-
-        self.displayWidthSpinBox = QSpinBox()
-        self.displayWidthSpinBox.setRange(640, 1920)
-        self.displayWidthSpinBox.setSuffix("px")
-        self.displayWidthSpinBox.setValue(1368)
-
-        xLabel = QLabel("x")
-
-        self.displayHeightSpinBox = QSpinBox()
-        self.displayHeightSpinBox.setRange(360, 1080)
-        self.displayHeightSpinBox.setSuffix("px")
-        self.displayHeightSpinBox.setValue(1024)
-
-        # Portrait and HiDPI
-        self.displayPortraitCheckBox = QCheckBox("Portrait Mode")
-        self.displayPortraitCheckBox.setChecked(False)
-
-        self.displayHIDPICheckBox = QCheckBox("HiDPI (2x resolution)")
-        self.displayHIDPICheckBox.setChecked(False)
-
-        # Start button
-        self.createDisplayButton = QPushButton("Create a Virtual Display")
-        self.createDisplayButton.setDefault(True)
-
-        # Notice Label
-        self.displayNoticeLabel = QLabel("After creating, you can adjust the display's " +
-                                "position in the Desktop Environment's settings " +
-                                "or ARandR.")
-        self.displayNoticeLabel.setWordWrap(True)
-        font = self.displayNoticeLabel.font()
-        font.setPointSize(9)
-        self.displayNoticeLabel.setFont(font)
-
-        # Putting them together
-        layout = QVBoxLayout()
-
-        # Grid layout for screen settings
-        gridLayout = QGridLayout()
-        # Resolution row
-        rowLayout = QHBoxLayout()
-        rowLayout.addWidget(resolutionLabel)
-        rowLayout.addWidget(self.displayWidthSpinBox)
-        rowLayout.addWidget(xLabel)
-        rowLayout.addWidget(self.displayHeightSpinBox)
-        rowLayout.addStretch()
-        layout.addLayout(rowLayout)
-        # Portrait & HiDPI
-        rowLayout = QHBoxLayout()
-        rowLayout.addWidget(self.displayPortraitCheckBox)
-        rowLayout.addWidget(self.displayHIDPICheckBox)
-        rowLayout.addStretch()
-        layout.addLayout(rowLayout)
-        # Display create button and Notice label
-        layout.addWidget(self.createDisplayButton)
-        layout.addWidget(self.displayNoticeLabel)
-
-        self.displayGroupBox.setLayout(layout)
-
-    def createVNCGroupBox(self):
-        self.VNCGroupBox = QGroupBox("VNC Server")
-
-        portLabel = QLabel("Port:")
-        self.VNCPortSpinBox = QSpinBox()
-        self.VNCPortSpinBox.setRange(1, 65535)
-        self.VNCPortSpinBox.setValue(5900)
-
-        passwordLabel = QLabel("Password:")
-        self.VNCPasswordLineEdit = QLineEdit()
-        self.VNCPasswordLineEdit.setEchoMode(QLineEdit.Password)
-        self.VNCPasswordLineEdit.setText("")
-
-        IPLabel = QLabel("Connect a VNC client to one of:")
-        self.VNCIPListWidget = QListWidget()
-
-        self.startVNCButton = QPushButton("Start VNC Server")
-        self.startVNCButton.setDefault(False)
-        self.startVNCButton.setEnabled(False)
-
-        # Set Overall layout
-        layout = QVBoxLayout()
-        rowLayout = QHBoxLayout()
-        rowLayout.addWidget(portLabel)
-        rowLayout.addWidget(self.VNCPortSpinBox)
-        rowLayout.addWidget(passwordLabel)
-        rowLayout.addWidget(self.VNCPasswordLineEdit)
-        layout.addLayout(rowLayout)
-        layout.addWidget(self.startVNCButton)
-        layout.addWidget(IPLabel)
-        layout.addWidget(self.VNCIPListWidget)
-        self.VNCGroupBox.setLayout(layout)
+    @pyqtProperty(bool)
+    def hidpi(self):
+        return self._hidpi
+    @hidpi.setter
+    def hidpi(self, hidpi):
+        self._hidpi = hidpi
     
-    def createBottomLayout(self):
-        self.bottomLayout = QVBoxLayout()
-
-        # Create button
-        self.bottomQuitButton = QPushButton("Quit")
-        self.bottomQuitButton.setDefault(False)
-        self.bottomQuitButton.setEnabled(True)
-
-        # Set Overall layout
-        hLayout = QHBoxLayout()
-        hLayout.addStretch()
-        hLayout.addWidget(self.bottomQuitButton)
-        self.bottomLayout.addLayout(hLayout)
-
-    def createActions(self):
-        self.createDisplayAction = QAction("Create display", self)
-        self.createDisplayAction.triggered.connect(self.createDisplayPressed)
-        self.createDisplayAction.setEnabled(True)
-
-        self.deleteDisplayAction = QAction("Disable display", self)
-        self.deleteDisplayAction.triggered.connect(self.createDisplayPressed)
-        self.deleteDisplayAction.setEnabled(False)
-
-        self.startVNCAction = QAction("&Start sharing", self)
-        self.startVNCAction.triggered.connect(self.startVNCPressed)
-        self.startVNCAction.setEnabled(False)
-
-        self.stopVNCAction = QAction("S&top sharing", self)
-        self.stopVNCAction.triggered.connect(self.startVNCPressed)
-        self.stopVNCAction.setEnabled(False)
+    @pyqtProperty(bool, notify=onVirtScreenCreatedChanged)
+    def virtScreenCreated(self):
+        return self._virtScreenCreated
+    @virtScreenCreated.setter
+    def virtScreenCreated(self, value):
+        self._virtScreenCreated = value
+        self.onVirtScreenCreatedChanged.emit(value)
         
-        self.openAction = QAction("&Open VirtScreen", self)
-        self.openAction.triggered.connect(self.showNormal)
+    @pyqtProperty(QQmlListProperty)
+    def screens(self):
+        return QQmlListProperty(DisplayProperty, self, self._screens)
 
-        self.quitAction = QAction("&Quit", self)
-        self.quitAction.triggered.connect(self.quitProgram)
+    @pyqtProperty(int, notify=onVirtScreenIndexChanged)
+    def virtScreenIndex(self):
+        return self._virtScreenIndex
+    @virtScreenIndex.setter
+    def virtScreenIndex(self, virtScreenIndex):
+        print("Changing virt to ", virtScreenIndex)
+        self.xrandr.virt_idx = virtScreenIndex
+        self.xrandr.virt = self.xrandr.screens[self.xrandr.virt_idx]
+        self._virtScreenIndex = virtScreenIndex
 
-    def createTrayIcon(self):
-        # Menu
-        self.trayIconMenu = QMenu(self)
-        self.trayIconMenu.addAction(self.createDisplayAction)
-        self.trayIconMenu.addAction(self.deleteDisplayAction)
-        self.trayIconMenu.addSeparator()
-        self.trayIconMenu.addAction(self.startVNCAction)
-        self.trayIconMenu.addAction(self.stopVNCAction)
-        self.trayIconMenu.addSeparator()
-        self.trayIconMenu.addAction(self.openAction)
-        self.trayIconMenu.addSeparator()
-        self.trayIconMenu.addAction(self.quitAction)
+    @pyqtProperty(int)
+    def vncPort(self):
+        return self._vncPort
+    @vncPort.setter
+    def vncPort(self, port):
+        self._vncPort = port
 
-        # Icons
-        self.icon = QIcon(ICON_PATH)
-        self.icon_tablet_off = QIcon(ICON_TABLET_OFF_PATH)
-        self.icon_tablet_on = QIcon(ICON_TABLET_ON_PATH)
+    @pyqtProperty(str)
+    def vncPassword(self):
+        return self._vncPassword
+    @vncPassword.setter
+    def vncPassword(self, vncPassword):
+        self._vncPassword = vncPassword
 
-        self.trayIcon = QSystemTrayIcon(self)
-        self.trayIcon.setContextMenu(self.trayIconMenu)
-        self.trayIcon.setIcon(self.icon)
+    @pyqtProperty(VNCState, notify=onVncStateChanged)
+    def vncState(self):
+        return self._vncState
+    @vncState.setter
+    def vncState(self, state):
+        self._vncState = state
+        self.onVncStateChanged.emit(self._vncState)
+
+    @pyqtProperty('QStringList', notify=onIPAddressesChanged)
+    def ipAddresses(self):
+        return self._ipAddresses
     
-    def update_ip_address(self):
-        self.VNCIPListWidget.clear()
+    @pyqtProperty(DisplayProperty)
+    def primary(self):
+        self._primary = self.xrandr.get_primary_screen()
+        return self._primary
+
+    @pyqtProperty(int)
+    def cursor_x(self):
+        cursor = QCursor().pos()
+        self._cursor_x = cursor.x()
+        return self._cursor_x
+
+    @pyqtProperty(int)
+    def cursor_y(self):
+        cursor = QCursor().pos()
+        self._cursor_y = cursor.y()
+        return self._cursor_y
+    
+    # Qt Slots
+    @pyqtSlot()
+    def createVirtScreen(self):
+        print("Creating a Virtual Screen...")
+        self.xrandr.create_virtual_screen(self.virt.width, self.virt.height, self.portrait, self.hidpi)
+        self.virtScreenCreated = True
+        
+    @pyqtSlot()
+    def deleteVirtScreen(self):
+        print("Deleting the Virtual Screen...")
+        if self.vncState is not Backend.VNCState.OFF:
+            print("Turn off the VNC server first")
+            self.virtScreenCreated = True
+            return
+        self.xrandr.delete_virtual_screen()
+        self.virtScreenCreated = False
+    
+    @pyqtSlot()
+    def startVNC(self):
+        # Check if a virtual screen created
+        if not self.virtScreenCreated:
+            print("Virtual Screen not crated.")
+            return
+        if self.vncState is not Backend.VNCState.OFF:
+            print("VNC Server is already running.")
+            return
+        # regex used in callbacks
+        re_connection = re.compile(r"^.*Got connection from client.*$", re.M)
+        # define callbacks
+        def _onConnected():
+            print("VNC started.")
+            self.vncState = Backend.VNCState.WAITING
+        def _onReceived(data):
+            data = data.decode("utf-8")
+            if (self._vncState is not Backend.VNCState.CONNECTED) and re_connection.search(data):
+                print("VNC connected.")
+                self.vncState = Backend.VNCState.CONNECTED
+        def _onEnded(exitCode):
+            print("VNC Exited.")
+            self.vncState = Backend.VNCState.OFF
+            atexit.unregister(self.stopVNC)
+        # Set password
+        password = False
+        if self.vncPassword:
+            print("There is password. Creating.")
+            password = True
+            p = SubprocessWrapper()
+            try:
+                p.run(f"x11vnc -storepasswd {self.vncPassword} {X11VNC_PASSWORD_PATH}")
+            except:
+                password = False
+        logfile = open(X11VNC_LOG_PATH, "wb")
+        self.vncServer = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, logfile)
+        port = self.vncPort
+        virt = self.xrandr.get_virtual_screen()
+        clip = f"{virt.width}x{virt.height}+{virt.x_offset}+{virt.y_offset}"
+        arg = f"x11vnc -multiptr -repeat -rfbport {port} -clip {clip}"
+        if password:
+            arg += f" -rfbauth {X11VNC_PASSWORD_PATH}"
+        self.vncServer.run(arg)
+        # auto stop on exit
+        atexit.register(self.stopVNC, force=True)
+
+    @pyqtSlot()
+    def stopVNC(self, force=False):
+        if force:
+            # Usually called from atexit().
+            self.vncServer.kill()
+            time.sleep(2)   # Make sure X11VNC shutdown before execute next atexit.
+        if self._vncState in (Backend.VNCState.WAITING, Backend.VNCState.CONNECTED):
+            self.vncServer.kill()
+        else:
+            print("stopVNC called while it is not running")
+
+    @pyqtSlot()
+    def updateIPAddresses(self):
+        self._ipAddresses.clear()
         for interface in interfaces():
             if interface == 'lo':
                 continue
@@ -534,69 +529,21 @@ class Window(QDialog):
                 continue
             for link in addresses:
                 if link is not None:
-                    self.VNCIPListWidget.addItem(link['addr'])
-    
-    def startVNC(self):
-        def _onReceived(data):
-            data = data.decode("utf-8")
-            for line in data.splitlines():
-                # TODO: Update state of the server
-                pass
-        def _onEnded(exitCode):
-            self.startVNCButton.setEnabled(False)
-            self.isVNCRunning = False
-            if self.isQuitProgramPending:
-                self.xrandr.delete_virtual_screen()
-                QApplication.instance().quit()
-            self.startVNCButton.setText("Start VNC Server")
-            self.startVNCButton.setEnabled(True)
-            self.createDisplayButton.setEnabled(True)
-            self.deleteDisplayAction.setEnabled(True)
-            self.startVNCAction.setEnabled(True)
-            self.stopVNCAction.setEnabled(False)
-            self.trayIcon.setIcon(self.icon_tablet_off)
-        # Setting UI before starting
-        self.createDisplayButton.setEnabled(False)
-        self.createDisplayAction.setEnabled(False)
-        self.deleteDisplayAction.setEnabled(False)
-        self.startVNCButton.setEnabled(False)
-        self.startVNCButton.setText("Running...")
-        self.startVNCAction.setEnabled(False)
-        # Set password
-        isPassword = False
-        if self.VNCPasswordLineEdit.text():
-            isPassword = True
-            p = SubprocessWrapper()
-            try:
-                p.run(f"x11vnc -storepasswd {self.VNCPasswordLineEdit.text()} {X11VNC_PASSWORD_PATH}")
-            except:
-                isPassword = False
-        # Run VNC server
-        self.isVNCRunning = True
-        logfile = open(X11VNC_LOG_PATH, "wb")
-        self.VNCServer = ProcessProtocol(_onReceived, _onReceived, _onEnded, logfile)
-        port = self.VNCPortSpinBox.value()
-        virt = self.xrandr.get_virtual_screen()
-        clip = f"{virt.width}x{virt.height}+{virt.x_offset}+{virt.y_offset}"
-        arg = f"x11vnc -multiptr -repeat -rfbport {port} -clip {clip}"
-        if isPassword:
-            arg += f" -rfbauth {X11VNC_PASSWORD_PATH}"
-        self.VNCServer.run(arg)
-        self.update_ip_address()
-        # Change UI
-        self.startVNCButton.setEnabled(True)
-        self.startVNCButton.setText("Stop Sharing")
-        self.stopVNCAction.setEnabled(True)
-        self.trayIcon.setIcon(self.icon_tablet_on)
+                    self._ipAddresses.append(link['addr'])
+        self.onIPAddressesChanged.emit()
+
+    @pyqtSlot()
+    def quitProgram(self):
+        QApplication.instance().quit()
 
 #-------------------------------------------------------------------------------
 # Main Code
 #-------------------------------------------------------------------------------
 if __name__ == '__main__':
-
-    import sys
-
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
+
+    from PyQt5.QtWidgets import QSystemTrayIcon, QMessageBox
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
         QMessageBox.critical(None, "VirtScreen",
@@ -618,15 +565,25 @@ if __name__ == '__main__':
             QMessageBox.critical(None, "VirtScreen",
                                 "VirtScreen cannot create ~/.virtscreen")
             sys.exit(1)
-
+    
     import qt5reactor # pylint: disable=E0401
     qt5reactor.install()
     from twisted.internet import utils, reactor # pylint: disable=E0401
 
-    QApplication.setQuitOnLastWindowClosed(False)
-    window = Window()
-    window.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
-    time.sleep(2)   # Otherwise the trayicon message will be shown in weird position
-    window.showMessage()
+    app.setWindowIcon(QIcon(ICON_PATH))
+    os.environ["QT_QUICK_CONTROLS_STYLE"] = "Material"
+    # os.environ["QT_QUICK_CONTROLS_STYLE"] = "Fusion"
+    
+    # Register the Python type.  Its URI is 'People', it's v1.0 and the type
+    # will be called 'Person' in QML.
+    qmlRegisterType(DisplayProperty, 'VirtScreen.DisplayProperty', 1, 0, 'DisplayProperty')
+    qmlRegisterType(Backend, 'VirtScreen.Backend', 1, 0, 'Backend')
+
+    # Create a component factory and load the QML script.
+    engine = QQmlApplicationEngine()
+    engine.load(QUrl('main.qml'))
+    if not engine.rootObjects():
+        QMessageBox.critical(None, "VirtScreen", "Failed to load qml")
+        sys.exit(1)
     sys.exit(app.exec_())
     reactor.run()
