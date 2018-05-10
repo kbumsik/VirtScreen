@@ -154,13 +154,19 @@ ApplicationWindow {
                                     list.push(screens[i]);
                                 }
                                 deviceComboBox.model = list;
+                                deviceComboBox.currentIndex = backend.virtScreenIndex
                             }
+
+                            onActivated: function(index) {
+                                backend.virtScreenIndex = index
+                            } 
+
                             delegate: ItemDelegate {
                                 width: deviceComboBox.width
                                 text: modelData.name
                                 font.weight: deviceComboBox.currentIndex === index ? Font.DemiBold : Font.Normal
                                 highlighted: ListView.isCurrentItem
-                                enabled: modelData.connected? false: true
+                                enabled: modelData.connected ? false : true
                             }
                         }
                     }

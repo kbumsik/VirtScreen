@@ -65,66 +65,66 @@ class DisplayProperty(QObject):
         ret = f"{self.name}"
         if self.connected:
             ret += " connected"
-            if self.primary:
-                ret += " primary"
-            if self.active:
-                ret += f" {self.width}x{self.height}+{self.x_offset}+{self.y_offset}"
-            else:
-                ret += " not active"
         else:
             ret += " disconnected"
+        if self.primary:
+            ret += " primary"
+        if self.active:
+            ret += f" {self.width}x{self.height}+{self.x_offset}+{self.y_offset}"
+        else:
+            ret += " not active"
         return ret
     
-    @pyqtProperty(str)
+    @pyqtProperty(str, constant=True)
     def name(self):
         return self._name
     @name.setter
     def name(self, name):
         self._name = name
 
-    @pyqtProperty(bool)
+    @pyqtProperty(bool, constant=True)
     def primary(self):
         return self._primary
     @primary.setter
     def primary(self, primary):
         self._primary = primary
 
-    @pyqtProperty(bool)
+    @pyqtProperty(bool, constant=True)
     def connected(self):
         return self._connected
     @connected.setter
     def connected(self, connected):
         self._connected = connected
 
-    @pyqtProperty(bool)
+    @pyqtProperty(bool, constant=True)
     def active(self):
         return self._active
     @active.setter
     def active(self, active):
         self._active = active
 
-    @pyqtProperty(int)
+    @pyqtProperty(int, constant=True)
     def width(self):
         return self._width
     @width.setter
     def width(self, width):
         self._width = width
 
-    @pyqtProperty(int)
+    @pyqtProperty(int, constant=True)
     def height(self):
         return self._height
     @height.setter
     def height(self, height):
         self._height = height
 
-    @pyqtProperty(int)
+    @pyqtProperty(int, constant=True)
     def x_offset(self):
         return self._x_offset
     @x_offset.setter
     def x_offset(self, x_offset):
         self._x_offset = x_offset
 
-    @pyqtProperty(int)
+    @pyqtProperty(int, constant=True)
     def y_offset(self):
         return self._y_offset
     @y_offset.setter
@@ -154,14 +154,13 @@ class XRandR(SubprocessWrapper):
         self.primary = None
         self.virt = None
         self.screens = []
-        self.virt_idx = None
         self.primary_idx = None
         pattern = re.compile(r"^(\S*)\s+(connected|disconnected)\s+((primary)\s+)?"
                         r"((\d+)x(\d+)\+(\d+)\+(\d+)\s+)?.*$", re.M)
         for idx, match in enumerate(pattern.finditer(output)):
             screen = DisplayProperty()
             screen.name = match.group(1)
-            if screen.name == self.DEFAULT_VIRT_SCREEN:
+            if (self.virt_idx is None) and (screen.name == self.DEFAULT_VIRT_SCREEN):
                 self.virt_idx = idx
             screen.primary = True if match.group(4) else False
             if screen.primary:
@@ -169,7 +168,7 @@ class XRandR(SubprocessWrapper):
             screen.connected = True if match.group(2) == "connected" else False
             screen.active = True if match.group(5) else False
             self.screens.append(screen)
-            if not screen.connected or not screen.active:
+            if not screen.active:
                 continue
             screen.width = int(match.group(6))
             screen.height = int(match.group(7))
@@ -228,7 +227,7 @@ class XRandR(SubprocessWrapper):
         self._add_screen_mode(width, height, portrait, hidpi)
         self.check_call(f"xrandr --output {self.virt.name} --mode {self.mode_name}")
         self.check_call("sleep 5")
-        self.check_call(f"xrandr --output {self.virt.name} --auto")
+        self.check_call(f"xrandr --output {self.virt.name} --preferred")
         self._update_screens()
 
     def delete_virtual_screen(self) -> None:
@@ -343,6 +342,7 @@ class Backend(QObject):
         self._hidpi = False
         self._virtScreenCreated = False
         self._screens: List[DisplayProperty] = self.xrandr.screens
+        self._virtScreenIndex = self.xrandr.virt_idx
         # VNC server properties
         self._vncPort = 5900
         self._vncPassword = ""
@@ -385,6 +385,16 @@ class Backend(QObject):
     @pyqtProperty(QQmlListProperty)
     def screens(self):
         return QQmlListProperty(DisplayProperty, self, self._screens)
+
+    @pyqtProperty(int)
+    def virtScreenIndex(self):
+        return self._virtScreenIndex
+    @virtScreenIndex.setter
+    def virtScreenIndex(self, virtScreenIndex):
+        print("Changing virt to ", virtScreenIndex)
+        self.xrandr.virt_idx = virtScreenIndex
+        self.xrandr.virt = self.xrandr.screens[self.xrandr.virt_idx]
+        self._virtScreenIndex = virtScreenIndex
 
     @pyqtProperty(int)
     def vncPort(self):
