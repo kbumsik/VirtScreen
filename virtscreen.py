@@ -329,7 +329,9 @@ class Backend(QObject):
 
     # Signals
     onVirtScreenCreatedChanged = pyqtSignal(bool)
+    onVirtScreenIndexChanged = pyqtSignal(int)
     onVncStateChanged = pyqtSignal(VNCState)
+    onIPAddressesChanged = pyqtSignal()
 
     def __init__(self, parent=None):
         super(Backend, self).__init__(parent)
@@ -348,6 +350,8 @@ class Backend(QObject):
         self._vncPort = 5900
         self._vncPassword = ""
         self._vncState = Backend.VNCState.OFF
+        self._ipAddresses: List[str] = []
+        self.updateIPAddresses()
         # Primary screen and mouse posistion
         self._primary: DisplayProperty() = self.xrandr.get_primary_screen()
         self._cursor_x: int
@@ -387,7 +391,7 @@ class Backend(QObject):
     def screens(self):
         return QQmlListProperty(DisplayProperty, self, self._screens)
 
-    @pyqtProperty(int)
+    @pyqtProperty(int, notify=onVirtScreenIndexChanged)
     def virtScreenIndex(self):
         return self._virtScreenIndex
     @virtScreenIndex.setter
@@ -418,6 +422,10 @@ class Backend(QObject):
     def vncState(self, state):
         self._vncState = state
         self.onVncStateChanged.emit(self._vncState)
+
+    @pyqtProperty('QStringList', notify=onIPAddressesChanged)
+    def ipAddresses(self):
+        return self._ipAddresses
     
     @pyqtProperty(DisplayProperty)
     def primary(self):
@@ -506,6 +514,20 @@ class Backend(QObject):
             self.vncServer.kill()
         else:
             print("stopVNC called while it is not running")
+
+    @pyqtSlot()
+    def updateIPAddresses(self):
+        self._ipAddresses.clear()
+        for interface in interfaces():
+            if interface == 'lo':
+                continue
+            addresses = ifaddresses(interface).get(AF_INET, None)
+            if addresses is None:
+                continue
+            for link in addresses:
+                if link is not None:
+                    self._ipAddresses.append(link['addr'])
+        self.onIPAddressesChanged.emit()
 
     @pyqtSlot()
     def quitProgram(self):

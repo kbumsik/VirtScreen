@@ -152,17 +152,8 @@ ApplicationWindow {
                             anchors.leftMargin: 120
 
                             textRole: "name"
-                            model: []
-                            
-                            Component.onCompleted: {
-                                var screens = backend.screens;
-                                var list = [];
-                                for (var i = 0; i < screens.length; i++) {
-                                    list.push(screens[i]);
-                                }
-                                deviceComboBox.model = list;
-                                deviceComboBox.currentIndex = backend.virtScreenIndex
-                            }
+                            model: backend.screens
+                            currentIndex: backend.virtScreenIndex
 
                             onActivated: function(index) {
                                 backend.virtScreenIndex = index
@@ -286,6 +277,18 @@ ApplicationWindow {
                 // Material.background: Material.Teal
                 // Material.foreground: Material.Grey
                 onClicked: backend.vncState == Backend.OFF ? backend.startVNC() : backend.stopVNC()
+            }
+
+            ListView {
+                // width: 180;
+                height: 200
+                anchors.left: parent.left
+                anchors.right: parent.right
+
+                model: backend.ipAddresses
+                delegate: Text {
+                    text: modelData
+                }
             }
         }
     }
