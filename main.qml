@@ -275,7 +275,7 @@ ApplicationWindow {
                 // Material.background: Material.Teal
                 // Material.foreground: Material.Grey
                 onClicked: {
-                    if (backend.vncState == 'Off') {
+                    if (backend.vncState == Backend.OFF) {
                         backend.startVNC()
                     } else {
                         backend.stopVNC()
@@ -284,7 +284,7 @@ ApplicationWindow {
 
                 Component.onCompleted: {
                     backend.onVncStateChanged.connect(function(state) {
-                        if (state == "Off") {
+                        if (state == Backend.OFF) {
                             vncButton.text = "Start VNC Server";
                         } else {
                             vncButton.text = "Stop VNC Server";
@@ -315,12 +315,6 @@ ApplicationWindow {
                 text: "Server Enabled"
                 checked: true
             }
-        }
-
-        Component.onCompleted: {
-            backend.onVncStateChanged.connect(function(state) {
-                vncStateLabel.text = state;
-            });
         }
     }
 

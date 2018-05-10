@@ -5,8 +5,7 @@ from enum import Enum
 from typing import List
 
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import  QObject, QUrl, Qt
-from PyQt5.QtCore import pyqtProperty, pyqtSlot, pyqtSignal
+from PyQt5.QtCore import  QObject, QUrl, Qt, pyqtProperty, pyqtSlot, pyqtSignal, Q_ENUMS
 from PyQt5.QtGui import QIcon, QCursor
 from PyQt5.QtQml import qmlRegisterType, QQmlApplicationEngine, QQmlListProperty
 
@@ -318,17 +317,19 @@ class ProcessProtocol(protocol.ProcessProtocol):
 #-------------------------------------------------------------------------------
 # QML Backend class
 #-------------------------------------------------------------------------------
-class VNCState(Enum):
-    """ Enum to indicate a state of the VNC server """
-    OFF = "Off"
-    WAITING = "Waiting"
-    CONNECTED = "Connected"
-
 class Backend(QObject):
     """ Backend class for QML frontend """
+    class VNCState:
+        """ Enum to indicate a state of the VNC server """
+        OFF = 0
+        WAITING = 1
+        CONNECTED = 2
+
+    Q_ENUMS(VNCState)
+
     # Signals
     onVirtScreenCreatedChanged = pyqtSignal(bool)
-    onVncStateChanged = pyqtSignal(str)
+    onVncStateChanged = pyqtSignal(VNCState)
 
     def __init__(self, parent=None):
         super(Backend, self).__init__(parent)
@@ -346,7 +347,7 @@ class Backend(QObject):
         # VNC server properties
         self._vncPort = 5900
         self._vncPassword = ""
-        self._vncState = VNCState.OFF
+        self._vncState = Backend.VNCState.OFF
         # Primary screen and mouse posistion
         self._primary: DisplayProperty() = self.xrandr.get_primary_screen()
         self._cursor_x: int
@@ -410,13 +411,13 @@ class Backend(QObject):
     def vncPassword(self, vncPassword):
         self._vncPassword = vncPassword
 
-    @pyqtProperty(str, notify=onVncStateChanged)
+    @pyqtProperty(VNCState, notify=onVncStateChanged)
     def vncState(self):
-        return self._vncState.value
+        return self._vncState
     @vncState.setter
     def vncState(self, state):
         self._vncState = state
-        self.onVncStateChanged.emit(self._vncState.value)
+        self.onVncStateChanged.emit(self._vncState)
     
     @pyqtProperty(DisplayProperty)
     def primary(self):
@@ -445,7 +446,7 @@ class Backend(QObject):
     @pyqtSlot()
     def deleteVirtScreen(self):
         print("Deleting the Virtual Screen...")
-        if self.vncState != VNCState.OFF.value:
+        if self.vncState is not Backend.VNCState.OFF:
             print("Turn off the VNC server first")
             self.virtScreenCreated = True
             return
@@ -463,15 +464,15 @@ class Backend(QObject):
         # define callbacks
         def _onConnected():
             print("VNC started.")
-            self.vncState = VNCState.WAITING
+            self.vncState = Backend.VNCState.WAITING
         def _onReceived(data):
             data = data.decode("utf-8")
-            if (self._vncState is not VNCState.CONNECTED) and re_connection.search(data):
+            if (self._vncState is not Backend.VNCState.CONNECTED) and re_connection.search(data):
                 print("VNC connected.")
-                self.vncState = VNCState.CONNECTED
+                self.vncState = Backend.VNCState.CONNECTED
         def _onEnded(exitCode):
             print("VNC Exited.")
-            self.vncState = VNCState.OFF
+            self.vncState = Backend.VNCState.OFF
             atexit.unregister(self.stopVNC)
         # Set password
         password = False
@@ -501,7 +502,7 @@ class Backend(QObject):
             # Usually called from atexit().
             self.vncServer.kill()
             time.sleep(2)   # Make sure X11VNC shutdown before execute next atexit.
-        if self._vncState in (VNCState.WAITING, VNCState.CONNECTED):
+        if self._vncState in (Backend.VNCState.WAITING, Backend.VNCState.CONNECTED):
             self.vncServer.kill()
         else:
             print("stopVNC called while it is not running")
