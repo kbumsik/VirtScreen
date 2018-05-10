@@ -356,10 +356,16 @@ ApplicationWindow {
             var primary = backend.primary;
             var width = primary.width;
             var height = primary.height;
+            var cursor_x = backend.cursor_x - primary.x_offset;
+            var cursor_y = backend.cursor_y - primary.y_offset;
             var x_mid = width / 2;
             var y_mid = height / 2;
-            window.x = width - window.width; //(backend.cursor_x > x_mid)? width - window.width : 0;
-            window.y = (backend.cursor_y > y_mid)? height - window.height : 0;
+            var x = width - window.width; //(cursor_x > x_mid)? width - window.width : 0;
+            var y = (cursor_y > y_mid)? height - window.height : 0;
+            x += primary.x_offset;
+            y += primary.y_offset;
+            window.x = x;
+            window.y = y;
             window.show();
             window.raise();
             window.requestActivate();
