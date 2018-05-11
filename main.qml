@@ -38,8 +38,8 @@ ApplicationWindow {
     }
     property bool vncAutoStart: false
 
-    function switchVNC(value) {
-        if (value) {
+    function switchVNC () {
+        if ((backend.vncState == Backend.OFF) && backend.virtScreenCreated) {
             backend.startVNC();
         }
     }
@@ -47,8 +47,10 @@ ApplicationWindow {
     onVncAutoStartChanged: {
         if (vncAutoStart) {
             backend.onVirtScreenCreatedChanged.connect(switchVNC);
+            backend.onVncStateChanged.connect(switchVNC);
         } else {
             backend.onVirtScreenCreatedChanged.disconnect(switchVNC);
+            backend.onVncStateChanged.disconnect(switchVNC);
         }
     }
 
@@ -91,10 +93,7 @@ ApplicationWindow {
         font.pointSize: 11 //parent.font.pointSize + 1
 
         RowLayout {
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
+            anchors.fill: parent
             anchors.leftMargin: margin + 10
             
             Label {
@@ -124,15 +123,8 @@ ApplicationWindow {
         y: (parent.height - height) / 2
 
         BusyIndicator {
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            
+            anchors.fill: parent
             Material.accent: Material.Cyan
-
-            x: (parent.width - width) / 2
-            y: (parent.height - height) / 2
             running: true
         }
 
@@ -149,10 +141,7 @@ ApplicationWindow {
         currentIndex: tabBar.currentIndex
 
         ColumnLayout {
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
+            anchors.fill: parent
             anchors.margins: margin
             
             GroupBox {
@@ -273,10 +262,12 @@ ApplicationWindow {
                                 if (backend.vncState == Backend.OFF) {
                                     console.log("Yes. Delete it");
                                     backend.deleteVirtScreen();
+                                    window.vncAutoStart = true;
                                 }
                             }
 
                             if (window.vncAutoStart && (backend.vncState != Backend.OFF)) {
+                                window.vncAutoStart = false;
                                 backend.onVncStateChanged.connect(autoOff);
                                 backend.onVncStateChanged.connect(function() {
                                     backend.onVncStateChanged.disconnect(autoOff);
@@ -298,10 +289,7 @@ ApplicationWindow {
         }
 
         ColumnLayout {
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
+            anchors.fill: parent
             anchors.margins: margin
 
             GroupBox {
