@@ -17,11 +17,13 @@ ApplicationWindow {
     title: "Basic layouts"
 
     Material.theme: Material.Light
+    Material.primary: Material.Teal
     Material.accent: Material.Teal
+    // Material.background: Material.Grey
 
     property int margin: 11
     width: 380
-    height: 500
+    height: 550
 
     // hide screen when loosing focus
     onActiveFocusItemChanged: {
@@ -64,10 +66,14 @@ ApplicationWindow {
         }
     }
 
+    // menuBar: MenuBar {
+    // }
+
     header: TabBar {
         id: tabBar
-        position: TabBar.Header
-        width: parent.width
+        position: TabBar.Footer
+        // Material.primary: Material.Teal
+
         currentIndex: 0
 
         TabButton {
@@ -79,12 +85,72 @@ ApplicationWindow {
         }
     }
 
+    menuBar: ToolBar {
+        id: toolbar
+        font.weight: Font.Medium
+        font.pointSize: 11 //parent.font.pointSize + 1
+
+        RowLayout {
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: margin + 10
+            
+            Label {
+                id: vncStateLabel
+                text: !backend.virtScreenCreated ? "Enable Virtual Screen first." :
+                      backend.vncState == Backend.OFF ? "Turn on VNC Server in the VNC tab." :
+                      backend.vncState == Backend.WAITING ? "VNC Server is waiting for a client..." :
+                      backend.vncState == Backend.CONNECTED ? "Connected." :
+                      "Server state error!"
+            }
+        }
+    }
+
+    // footer: ToolBar {
+    //     font.weight: Font.Medium
+    //     font.pointSize: 11 //parent.font.pointSize + 1
+    //     anchors { horizontalCenter: parent.horizontalCenter }
+    //     width: 200
+    // }
+
+    Popup {
+        id: busyDialog
+        modal: true
+        closePolicy: Popup.NoAutoClose
+
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+
+        BusyIndicator {
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            
+            Material.accent: Material.Cyan
+
+            x: (parent.width - width) / 2
+            y: (parent.height - height) / 2
+            running: true
+        }
+
+        background: Rectangle {
+            color: "transparent"
+            implicitWidth: 100
+            implicitHeight: 100
+            // border.color: "#444"
+        }
+    }
+
     StackLayout {
         width: parent.width
         currentIndex: tabBar.currentIndex
 
         ColumnLayout {
             anchors.top: parent.top
+            anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.margins: margin
@@ -185,28 +251,15 @@ ApplicationWindow {
             Button {
                 id: virtScreenButton
                 text: backend.virtScreenCreated ? "Disable Virtual Screen" : "Enable Virtual Screen"
-
+                highlighted: true
+                
                 anchors.left: parent.left
                 anchors.right: parent.right
-                // Material.background: Material.Teal
-                // Material.foreground: Material.Grey
+                // Material.accent: Material.Teal
+                // Material.theme: Material.Dark
+
                 enabled: window.vncAutoStart ? true :
                          backend.vncState == Backend.OFF ? true : false
-
-                Popup {
-                    id: busyDialog
-                    modal: true
-                    closePolicy: Popup.NoAutoClose
-
-                    x: (parent.width - width) / 2
-                    y: (parent.height - height) / 2
-
-                    BusyIndicator {
-                        x: (parent.width - width) / 2
-                        y: (parent.height - height) / 2
-                        running: true
-                    }
-                }
 
                 onClicked: {
                     busyDialog.open();
@@ -246,6 +299,7 @@ ApplicationWindow {
 
         ColumnLayout {
             anchors.top: parent.top
+            anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.margins: margin
@@ -302,6 +356,7 @@ ApplicationWindow {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottomMargin: 0
+                highlighted: true
 
                 text: window.vncAutoStart ? "Auto start enabled" : 
                       backend.vncState == Backend.OFF ? "Start VNC Server" : "Stop VNC Server"
@@ -331,7 +386,7 @@ ApplicationWindow {
             }
 
             ListView {
-                // width: 180;
+                id: ipListView
                 height: 200
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -340,28 +395,6 @@ ApplicationWindow {
                 delegate: Text {
                     text: modelData
                 }
-            }
-        }
-    }
-
-    footer: ToolBar {
-        font.weight: Font.Medium
-        font.pointSize: 11 //parent.font.pointSize + 1
-
-        RowLayout {
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.leftMargin: margin + 10
-            
-            Label {
-                id: vncStateLabel
-                text: !backend.virtScreenCreated ? "Enable Virtual Screen first." :
-                      backend.vncState == Backend.OFF ? "Turn on VNC Server in the VNC tab." :
-                      backend.vncState == Backend.WAITING ? "VNC Server is waiting for a client..." :
-                      backend.vncState == Backend.CONNECTED ? "Connected." :
-                      "Server state error!"
             }
         }
     }
