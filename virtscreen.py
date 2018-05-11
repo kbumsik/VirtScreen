@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import sys, os, subprocess, signal, re, atexit, time
+import sys, os, subprocess, signal, re, atexit, time, json
 from enum import Enum
-from typing import List
+from typing import List, Dict
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import  QObject, QUrl, Qt, pyqtProperty, pyqtSlot, pyqtSignal, Q_ENUMS
@@ -20,7 +20,8 @@ if HOME_PATH is not None:
     HOME_PATH = HOME_PATH + "/.virtscreen"
 X11VNC_LOG_PATH = HOME_PATH + "/x11vnc_log.txt"
 X11VNC_PASSWORD_PATH = HOME_PATH + "/x11vnc_passwd"
-CONFIG_PATH = HOME_PATH + "/config"
+CONFIG_PATH = HOME_PATH + "/config.json"
+DEFAULT_CONFIG_PATH = "./config.default.json"
 
 PROGRAM_PATH = "."
 ICON_PATH = PROGRAM_PATH + "/icon/icon.png"
@@ -326,6 +327,25 @@ class ProcessProtocol(protocol.ProcessProtocol):
 #-------------------------------------------------------------------------------
 class Backend(QObject):
     """ Backend class for QML frontend """
+    # Virtual screen properties
+    settings: Dict
+    xrandr: XRandR
+    _virt: DisplayProperty = DisplayProperty()
+    _portrait: bool
+    _hidpi: bool
+    _virtScreenCreated: bool = False
+    _screens: List[DisplayProperty]
+    _virtScreenIndex: int
+    # VNC server properties
+    _vncPort: int
+    _vncPassword: str = ""
+    _vncState: int
+    _ipAddresses: List[str] = []
+    # Primary screen and mouse posistion
+    _primary: DisplayProperty()
+    _cursor_x: int
+    _cursor_y: int
+
     class VNCState:
         """ Enum to indicate a state of the VNC server """
         OFF = 0
@@ -342,27 +362,31 @@ class Backend(QObject):
 
     def __init__(self, parent=None):
         super(Backend, self).__init__(parent)
-        # objects
+        # Read JSON to load variables
+        try:
+            with open(CONFIG_PATH, "r") as f:
+                self.settings = json.load(f)
+                self.virt.width = self.settings['virt']['width']
+                self.virt.height = self.settings['virt']['height']
+                self._portrait = self.settings['virt']['portrait']
+                self._hidpi = self.settings['virt']['hidpi']
+                self._vncPort = self.settings['vnc']['port']
+        except (FileNotFoundError, json.JSONDecodeError, KeyError):
+            print("Default Setting used.")
+            with open(DEFAULT_CONFIG_PATH, "r") as f:
+                self.settings = json.load(f)
+                self.virt.width = self.settings['virt']['width']
+                self.virt.height = self.settings['virt']['height']
+                self._portrait = self.settings['virt']['portrait']
+                self._hidpi = self.settings['virt']['hidpi']
+                self._vncPort = self.settings['vnc']['port']
+        # create objects
+        self._vncState: Backend.VNCState = Backend.VNCState.OFF
         self.xrandr = XRandR()
-        # Virtual screen properties
-        self._virt = DisplayProperty()
-        self.virt.width = 1368
-        self.virt.height = 1024
-        self._portrait = False
-        self._hidpi = False
-        self._virtScreenCreated = False
-        self._screens: List[DisplayProperty] = self.xrandr.screens
+        self._screens = self.xrandr.screens
         self._virtScreenIndex = self.xrandr.virt_idx
-        # VNC server properties
-        self._vncPort = 5900
-        self._vncPassword = ""
-        self._vncState = Backend.VNCState.OFF
-        self._ipAddresses: List[str] = []
-        self.updateIPAddresses()
-        # Primary screen and mouse posistion
         self._primary: DisplayProperty() = self.xrandr.get_primary_screen()
-        self._cursor_x: int
-        self._cursor_y: int
+        self.updateIPAddresses()
         
     # Qt properties
     @pyqtProperty(DisplayProperty)
@@ -541,6 +565,14 @@ class Backend(QObject):
 
     @pyqtSlot()
     def quitProgram(self):
+        # Save settings first
+        with open(CONFIG_PATH, 'w') as f:
+            self.settings['virt']['width'] = self.virt.width
+            self.settings['virt']['height'] = self.virt.height
+            self.settings['virt']['portrait'] = self._portrait
+            self.settings['virt']['hidpi'] = self._hidpi
+            self.settings['vnc']['port'] = self._vncPort
+            json.dump(self.settings, f, sort_keys=True, indent=4)
         QApplication.instance().quit()
 
 #-------------------------------------------------------------------------------

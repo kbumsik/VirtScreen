@@ -440,7 +440,11 @@ ApplicationWindow {
         menu: Labs.Menu {
             Labs.MenuItem {
                 text: qsTr("&Quit")
-                onTriggered: backend.quitProgram()
+                onTriggered: {
+                    backend.onVirtScreenCreatedChanged.disconnect(window.switchVNC);
+                    backend.onVncStateChanged.disconnect(window.switchVNC);
+                    backend.quitProgram();
+                }
             }
         }
     }
