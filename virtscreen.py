@@ -327,6 +327,13 @@ class ProcessProtocol(protocol.ProcessProtocol):
 #-------------------------------------------------------------------------------
 class Backend(QObject):
     """ Backend class for QML frontend """
+    class VNCState:
+        """ Enum to indicate a state of the VNC server """
+        OFF = 0
+        WAITING = 1
+        CONNECTED = 2
+
+    Q_ENUMS(VNCState)
     # Virtual screen properties
     settings: Dict
     xrandr: XRandR
@@ -339,21 +346,13 @@ class Backend(QObject):
     # VNC server properties
     _vncPort: int
     _vncPassword: str = ""
-    _vncState: int
+    _vncState: VNCState
     _vncAutoStart: bool
     _ipAddresses: List[str] = []
     # Primary screen and mouse posistion
     _primary: DisplayProperty()
     _cursor_x: int
     _cursor_y: int
-
-    class VNCState:
-        """ Enum to indicate a state of the VNC server """
-        OFF = 0
-        WAITING = 1
-        CONNECTED = 2
-
-    Q_ENUMS(VNCState)
 
     # Signals
     onVirtScreenCreatedChanged = pyqtSignal(bool)
@@ -385,7 +384,7 @@ class Backend(QObject):
                 self._vncPort = self.settings['vnc']['port']
                 self._vncAutoStart = self.settings['vnc']['autostart']
         # create objects
-        self._vncState: Backend.VNCState = Backend.VNCState.OFF
+        self._vncState = self.VNCState.OFF
         self.xrandr = XRandR()
         self._screens = self.xrandr.screens
         self._virtScreenIndex = self.xrandr.virt_idx
@@ -497,7 +496,7 @@ class Backend(QObject):
     @pyqtSlot()
     def deleteVirtScreen(self):
         print("Deleting the Virtual Screen...")
-        if self.vncState is not Backend.VNCState.OFF:
+        if self.vncState is not self.VNCState.OFF:
             print("Turn off the VNC server first")
             self.virtScreenCreated = True
             return
@@ -510,7 +509,7 @@ class Backend(QObject):
         if not self.virtScreenCreated:
             print("Virtual Screen not crated.")
             return
-        if self.vncState is not Backend.VNCState.OFF:
+        if self.vncState is not self.VNCState.OFF:
             print("VNC Server is already running.")
             return
         # regex used in callbacks
@@ -518,15 +517,15 @@ class Backend(QObject):
         # define callbacks
         def _onConnected():
             print("VNC started.")
-            self.vncState = Backend.VNCState.WAITING
+            self.vncState = self.VNCState.WAITING
         def _onReceived(data):
             data = data.decode("utf-8")
-            if (self._vncState is not Backend.VNCState.CONNECTED) and re_connection.search(data):
+            if (self._vncState is not self.VNCState.CONNECTED) and re_connection.search(data):
                 print("VNC connected.")
-                self.vncState = Backend.VNCState.CONNECTED
+                self.vncState = self.VNCState.CONNECTED
         def _onEnded(exitCode):
             print("VNC Exited.")
-            self.vncState = Backend.VNCState.OFF
+            self.vncState = self.VNCState.OFF
             atexit.unregister(self.stopVNC)
         # Set password
         password = False
@@ -556,7 +555,7 @@ class Backend(QObject):
             # Usually called from atexit().
             self.vncServer.kill()
             time.sleep(2)   # Make sure X11VNC shutdown before execute next atexit.
-        if self._vncState in (Backend.VNCState.WAITING, Backend.VNCState.CONNECTED):
+        if self._vncState in (self.VNCState.WAITING, self.VNCState.CONNECTED):
             self.vncServer.kill()
         else:
             print("stopVNC called while it is not running")
