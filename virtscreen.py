@@ -178,6 +178,13 @@ class XRandR(SubprocessWrapper):
             print("\t", s)
         if self.virt_idx == self.primary_idx:
             raise RuntimeError("VIrtual screen must be selected other than the primary screen")
+        if self.virt_idx is None:
+            for idx, screen in enumerate(self.screens):
+                if not screen.connected and not screen.active:
+                    self.virt_idx = idx
+                    break
+            if self.virt_idx is None:
+                raise RuntimeError("There is no available devices for virtual screen")
         self.virt = self.screens[self.virt_idx]
         self.primary = self.screens[self.primary_idx]
 
