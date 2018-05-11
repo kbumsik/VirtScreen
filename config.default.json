@@ -1,0 +1,14 @@
+{
+    "virt": {
+        "device": "VIRTUAL1",
+        "width": 1368,
+        "height": 1024,
+        "portrait": false,
+        "hidpi": false
+    },
+    "vnc": {
+        "port": 5900,
+        "autostart": false
+    },
+    "presets": []
+}

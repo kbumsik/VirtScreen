@@ -340,6 +340,7 @@ class Backend(QObject):
     _vncPort: int
     _vncPassword: str = ""
     _vncState: int
+    _vncAutoStart: bool
     _ipAddresses: List[str] = []
     # Primary screen and mouse posistion
     _primary: DisplayProperty()
@@ -358,6 +359,7 @@ class Backend(QObject):
     onVirtScreenCreatedChanged = pyqtSignal(bool)
     onVirtScreenIndexChanged = pyqtSignal(int)
     onVncStateChanged = pyqtSignal(VNCState)
+    onVncAutoStartChanged = pyqtSignal(bool)
     onIPAddressesChanged = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -371,6 +373,7 @@ class Backend(QObject):
                 self._portrait = self.settings['virt']['portrait']
                 self._hidpi = self.settings['virt']['hidpi']
                 self._vncPort = self.settings['vnc']['port']
+                self._vncAutoStart = self.settings['vnc']['autostart']
         except (FileNotFoundError, json.JSONDecodeError, KeyError):
             print("Default Setting used.")
             with open(DEFAULT_CONFIG_PATH, "r") as f:
@@ -380,6 +383,7 @@ class Backend(QObject):
                 self._portrait = self.settings['virt']['portrait']
                 self._hidpi = self.settings['virt']['hidpi']
                 self._vncPort = self.settings['vnc']['port']
+                self._vncAutoStart = self.settings['vnc']['autostart']
         # create objects
         self._vncState: Backend.VNCState = Backend.VNCState.OFF
         self.xrandr = XRandR()
@@ -417,7 +421,7 @@ class Backend(QObject):
     def virtScreenCreated(self, value):
         self._virtScreenCreated = value
         self.onVirtScreenCreatedChanged.emit(value)
-        
+
     @pyqtProperty(QQmlListProperty)
     def screens(self):
         return QQmlListProperty(DisplayProperty, self, self._screens)
@@ -453,6 +457,14 @@ class Backend(QObject):
     def vncState(self, state):
         self._vncState = state
         self.onVncStateChanged.emit(self._vncState)
+        
+    @pyqtProperty(bool, notify=onVncAutoStartChanged)
+    def vncAutoStart(self):
+        return self._vncAutoStart
+    @vncAutoStart.setter
+    def vncAutoStart(self, vncAutoStart):
+        self._vncAutoStart = vncAutoStart
+        self.onVncAutoStartChanged.emit(vncAutoStart)
 
     @pyqtProperty('QStringList', notify=onIPAddressesChanged)
     def ipAddresses(self):
@@ -572,7 +584,9 @@ class Backend(QObject):
             self.settings['virt']['portrait'] = self._portrait
             self.settings['virt']['hidpi'] = self._hidpi
             self.settings['vnc']['port'] = self._vncPort
+            self.settings['vnc']['autostart'] = self._vncAutoStart
             json.dump(self.settings, f, sort_keys=True, indent=4)
+        self.blockSignals(True) # This will prevent invoking auto-restart or etc.
         QApplication.instance().quit()
 
 #-------------------------------------------------------------------------------

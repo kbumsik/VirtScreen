@@ -35,24 +35,29 @@ ApplicationWindow {
     // virtscreen.py backend.
     Backend {
         id: backend
-    }
-    property bool vncAutoStart: false
+        
+        function switchVNC () {
+            if ((backend.vncState == Backend.OFF) && backend.virtScreenCreated) {
+                backend.startVNC();
+            }
+        }
 
-    function switchVNC () {
-        if ((backend.vncState == Backend.OFF) && backend.virtScreenCreated) {
-            backend.startVNC();
+        onVncAutoStartChanged: {
+            if (vncAutoStart) {
+                onVirtScreenCreatedChanged.connect(switchVNC);
+                onVncStateChanged.connect(switchVNC);
+            } else {
+                onVirtScreenCreatedChanged.disconnect(switchVNC);
+                onVncStateChanged.disconnect(switchVNC);
+            }
+        }
+
+        Component.onCompleted: {
+            // force emit signal on load 
+            vncAutoStart = vncAutoStart;
         }
     }
-    
-    onVncAutoStartChanged: {
-        if (vncAutoStart) {
-            backend.onVirtScreenCreatedChanged.connect(switchVNC);
-            backend.onVncStateChanged.connect(switchVNC);
-        } else {
-            backend.onVirtScreenCreatedChanged.disconnect(switchVNC);
-            backend.onVncStateChanged.disconnect(switchVNC);
-        }
-    }
+
 
     // Timer object and function
     Timer {
@@ -247,7 +252,7 @@ ApplicationWindow {
                 // Material.accent: Material.Teal
                 // Material.theme: Material.Dark
 
-                enabled: window.vncAutoStart ? true :
+                enabled: backend.vncAutoStart ? true :
                          backend.vncState == Backend.OFF ? true : false
 
                 onClicked: {
@@ -262,12 +267,12 @@ ApplicationWindow {
                                 if (backend.vncState == Backend.OFF) {
                                     console.log("Yes. Delete it");
                                     backend.deleteVirtScreen();
-                                    window.vncAutoStart = true;
+                                    backend.vncAutoStart = true;
                                 }
                             }
 
-                            if (window.vncAutoStart && (backend.vncState != Backend.OFF)) {
-                                window.vncAutoStart = false;
+                            if (backend.vncAutoStart && (backend.vncState != Backend.OFF)) {
+                                backend.vncAutoStart = false;
                                 backend.onVncStateChanged.connect(autoOff);
                                 backend.onVncStateChanged.connect(function() {
                                     backend.onVncStateChanged.disconnect(autoOff);
@@ -346,9 +351,9 @@ ApplicationWindow {
                 anchors.bottomMargin: 0
                 highlighted: true
 
-                text: window.vncAutoStart ? "Auto start enabled" : 
+                text: backend.vncAutoStart ? "Auto start enabled" : 
                       backend.vncState == Backend.OFF ? "Start VNC Server" : "Stop VNC Server"
-                enabled: window.vncAutoStart ? false : 
+                enabled: backend.vncAutoStart ? false : 
                          backend.virtScreenCreated ? true : false
                 // Material.background: Material.Teal
                 // Material.foreground: Material.Grey
@@ -362,13 +367,13 @@ ApplicationWindow {
 
                 Label { text: "Auto start"; }
                 Switch {
-                    checked: window.vncAutoStart
-                    onCheckedChanged: {
+                    checked: backend.vncAutoStart
+                    onToggled: {
                         if ((checked == true) && (backend.vncState == Backend.OFF) && 
                                 backend.virtScreenCreated) {
                             backend.startVNC();
                         }
-                        window.vncAutoStart = checked;
+                        backend.vncAutoStart = checked;
                     }
                 }
             }
@@ -441,8 +446,6 @@ ApplicationWindow {
             Labs.MenuItem {
                 text: qsTr("&Quit")
                 onTriggered: {
-                    backend.onVirtScreenCreatedChanged.disconnect(window.switchVNC);
-                    backend.onVncStateChanged.disconnect(window.switchVNC);
                     backend.quitProgram();
                 }
             }
