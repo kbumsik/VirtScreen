@@ -21,9 +21,9 @@ ApplicationWindow {
     Material.accent: Material.Teal
     // Material.background: Material.Grey
 
-    property int margin: 11
+    property int margin: 8
     width: 380
-    height: 550
+    height: 525
 
     // hide screen when loosing focus
     property bool autoClose: true
@@ -115,6 +115,32 @@ ApplicationWindow {
                       backend.vncState == Backend.CONNECTED ? "Connected." :
                       "Server state error!"
             }
+
+            ToolButton {
+                id: menuButton
+                anchors.right: parent.right
+                text: qsTr("⋮")
+                onClicked: menu.open()
+
+                Menu {
+                    id: menu
+                    y: toolbar.height
+
+                    MenuItem {
+                        text: qsTr("&About")
+                        onTriggered: {
+                            aboutDialog.open();
+                        }
+                    }
+
+                    MenuItem {
+                        text: qsTr("&Quit")
+                        onTriggered: {
+                            backend.quitProgram();
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -145,9 +171,8 @@ ApplicationWindow {
         id: busyDialog
         modal: true
         closePolicy: Popup.NoAutoClose
-
         x: (parent.width - width) / 2
-        y: (parent.height - height) / 2
+        y: parent.height / 2 - height
 
         BusyIndicator {
             anchors.fill: parent
@@ -160,6 +185,55 @@ ApplicationWindow {
             implicitWidth: 100
             implicitHeight: 100
             // border.color: "#444"
+        }
+    }
+
+    Dialog {
+        id: aboutDialog
+        focus: true
+        x: (parent.width - width) / 2
+        y: (parent.width - height) / 2 //(window.height) / 2 
+        width: window.width - 26
+
+        ColumnLayout {
+            anchors.fill: parent
+            
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                horizontalAlignment: Text.AlignHCenter
+                font { weight: Font.Bold; pointSize: 15 }
+                text: "VirtScreen"
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                horizontalAlignment: Text.AlignHCenter
+                text: "Make your iPad/tablet/computer<br/>as a secondary monitor.<br/>"
+            }
+            Text {
+                text: "- <a href='https://github.com/kbumsik/VirtScreen'>Project Website</a>"
+                onLinkActivated: Qt.openUrlExternally(link)
+            }
+            Text {
+                text: "- <a href='https://github.com/kbumsik/VirtScreen/issues'>Issues & Bug Report</a>"
+                onLinkActivated: Qt.openUrlExternally(link)
+            }
+            Text {
+                font { pointSize: 10 }
+                anchors.horizontalCenter: parent.horizontalCenter
+                horizontalAlignment: Text.AlignHCenter
+                lineHeight: 0.7
+                text: "<br/>Copyright © 2018 Bumsik Kim  <a href='https://kbumsik.io/'>Homepage</a><br/>"
+                onLinkActivated: Qt.openUrlExternally(link)
+            }
+            Text {
+                font { pointSize: 9 }
+                anchors.horizontalCenter: parent.horizontalCenter
+                horizontalAlignment: Text.AlignHCenter
+                text: "This program comes with absolutely no warranty.<br/>" +
+                      "See the <a href='https://github.com/kbumsik/VirtScreen/blob/master/LICENSE'>" +
+                      "GNU General Public License, version 3</a> for details."
+                onLinkActivated: Qt.openUrlExternally(link)
+            }
         }
     }
 
@@ -176,7 +250,6 @@ ApplicationWindow {
             
             GroupBox {
                 title: "Virtual Display"
-                // font.bold: true
                 anchors.left: parent.left
                 anchors.right: parent.right
 
