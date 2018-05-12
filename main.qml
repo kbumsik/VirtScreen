@@ -419,6 +419,7 @@ ApplicationWindow {
             }
 
             RowLayout {
+                id: autoSwitchLayout
                 anchors.top: vncButton.top
                 anchors.right: parent.right
                 anchors.topMargin: vncButton.height - 10
@@ -439,11 +440,10 @@ ApplicationWindow {
 
             GroupBox {
                 title: "Available IP addresses"
-                anchors.top: vncButton.top
+                anchors.top: autoSwitchLayout.bottom
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.topMargin: 70
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -451,10 +451,27 @@ ApplicationWindow {
                     ListView {
                         id: ipListView
                         anchors.fill: parent
+
+                        // anchors.top: parent.top
+                        // anchors.left: parent.left
+                        // anchors.right: parent.right
+                        // height: 100
+
+                        ScrollBar.vertical: ScrollBar {
+                            parent: ipListView.parent
+                            anchors.top: ipListView.top
+                            anchors.right: ipListView.right
+                            anchors.bottom: ipListView.bottom
+                            policy: ScrollBar.AlwaysOn
+                        }
                         
                         model: backend.ipAddresses
-                        delegate: Label {
+                        delegate: TextEdit {
                             text: modelData
+                            readOnly: true
+                            selectByMouse: true
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            font.pointSize: 12
                         }
                     }
                 }
@@ -465,7 +482,9 @@ ApplicationWindow {
     // Sytray Icon
     Labs.SystemTrayIcon {
         id: sysTrayIcon
-        iconSource: "icon/icon.png"
+        iconSource: backend.vncState == Backend.CONNECTED ? "icon/icon_tablet_on.png" :
+                    backend.virtScreenCreated ? "icon/icon_tablet_off.png" :
+                    "icon/icon.png"
         visible: true
         property bool clicked: false
 
@@ -513,6 +532,31 @@ ApplicationWindow {
         }
 
         menu: Labs.Menu {
+            Labs.MenuItem {
+                enabled: false
+                text: vncStateLabel.text
+            }
+
+            Labs.MenuItem {
+                separator: true
+            }
+
+            Labs.MenuItem {
+                text: virtScreenButton.text
+                enabled: virtScreenButton.enabled
+                onTriggered: virtScreenButton.onClicked()
+            }
+
+            Labs.MenuItem {
+                text: vncButton.text
+                enabled: vncButton.enabled
+                onTriggered: vncButton.onClicked()
+            }
+
+            Labs.MenuItem {
+                separator: true
+            }
+
             Labs.MenuItem {
                 text: qsTr("&Quit")
                 onTriggered: {
