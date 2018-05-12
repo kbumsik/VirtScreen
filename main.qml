@@ -26,10 +26,32 @@ ApplicationWindow {
     height: 550
 
     // hide screen when loosing focus
+    property bool autoClose: true
+    property bool ignoreCloseOnce: false
+    onAutoCloseChanged: {
+        // When setting auto close disabled and then enabled again, we need to
+        // ignore focus change once. Otherwise the window always is closed one time
+        // even when the mouse is clicked in the window.  
+        if (!autoClose) {
+            ignoreCloseOnce = true;
+        }
+    }
     onActiveFocusItemChanged: {
-        if ((!activeFocusItem) && (!sysTrayIcon.clicked)) {
+        if (autoClose && !ignoreCloseOnce && !activeFocusItem && !sysTrayIcon.clicked) {
             this.hide();
         }
+        if (ignoreCloseOnce && autoClose) {
+            ignoreCloseOnce = false;
+        }
+    }
+
+    // One-shot signal connect
+    function connectOnce (signal, slot) {
+        var f = function() {
+            slot.apply(this, arguments);
+            signal.disconnect(f);
+        }
+        signal.connect(f);
     }
 
     // virtscreen.py backend.
@@ -262,20 +284,16 @@ ApplicationWindow {
                         if (!backend.virtScreenCreated) {
                             backend.createVirtScreen();
                         } else {
-                            function autoOff() {
-                                console.log("autoOff called here", backend.vncState);
-                                if (backend.vncState == Backend.OFF) {
-                                    console.log("Yes. Delete it");
-                                    backend.deleteVirtScreen();
-                                    backend.vncAutoStart = true;
-                                }
-                            }
-
+                            // If auto start enabled, stop VNC first then 
                             if (backend.vncAutoStart && (backend.vncState != Backend.OFF)) {
                                 backend.vncAutoStart = false;
-                                backend.onVncStateChanged.connect(autoOff);
-                                backend.onVncStateChanged.connect(function() {
-                                    backend.onVncStateChanged.disconnect(autoOff);
+                                connectOnce(backend.onVncStateChanged, function() {
+                                    console.log("autoOff called here", backend.vncState);
+                                    if (backend.vncState == Backend.OFF) {
+                                        console.log("Yes. Delete it");
+                                        backend.deleteVirtScreen();
+                                        backend.vncAutoStart = true;
+                                    }
                                 });
                                 backend.stopVNC();
                             } else {
@@ -289,6 +307,43 @@ ApplicationWindow {
                     backend.onVirtScreenCreatedChanged.connect(function(created) {
                         busyDialog.close();
                     });
+                }
+            }
+
+            Button {
+                id: displaySettingButton
+                text: "Open Display Setting"
+                
+                anchors.left: parent.left
+                anchors.right: parent.right
+                // Material.accent: Material.Teal
+                // Material.theme: Material.Dark
+
+                enabled: backend.virtScreenCreated ? true : false
+
+                onClicked: {
+                    busyDialog.open();
+                    window.autoClose = false;
+                    if (backend.vncState != Backend.OFF) {
+                        console.log("vnc is running");
+                        var restoreVNC = true;
+                        if (backend.vncAutoStart) {
+                            backend.vncAutoStart = false;
+                            var restoreAutoStart = true;
+                        }
+                    }
+                    connectOnce(backend.onDisplaySettingClosed, function() {
+                        window.autoClose = true;
+                        busyDialog.close();
+                        if (restoreAutoStart) {
+                            backend.vncAutoStart = true;
+                        }
+                        if (restoreVNC) {
+                            backend.startVNC();
+                        }
+                    });
+                    backend.stopVNC();
+                    backend.openDisplaySetting();
                 }
             }
         }

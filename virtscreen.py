@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, os, subprocess, signal, re, atexit, time, json
+import sys, os, subprocess, signal, re, atexit, time, json, shutil
 from enum import Enum
 from typing import List, Dict
 
@@ -51,16 +51,18 @@ class SubprocessWrapper:
 # Display properties
 #-------------------------------------------------------------------------------
 class DisplayProperty(QObject):
+    _name: str
+    _primary: bool
+    _connected: bool
+    _active: bool
+    _width: int
+    _height: int
+    _x_offset: int
+    _y_offset: int
+
     def __init__(self, parent=None):
         super(DisplayProperty, self).__init__(parent)
-        self._name: str
-        self._primary: bool
-        self._connected: bool
-        self._active: bool
-        self._width: int
-        self._height: int
-        self._x_offset: int
-        self._y_offset: int
+
     def __str__(self):
         ret = f"{self.name}"
         if self.connected:
@@ -353,6 +355,7 @@ class Backend(QObject):
     _primary: DisplayProperty()
     _cursor_x: int
     _cursor_y: int
+    vncServer: ProcessProtocol
 
     # Signals
     onVirtScreenCreatedChanged = pyqtSignal(bool)
@@ -360,6 +363,7 @@ class Backend(QObject):
     onVncStateChanged = pyqtSignal(VNCState)
     onVncAutoStartChanged = pyqtSignal(bool)
     onIPAddressesChanged = pyqtSignal()
+    onDisplaySettingClosed = pyqtSignal()
 
     def __init__(self, parent=None):
         super(Backend, self).__init__(parent)
@@ -548,6 +552,24 @@ class Backend(QObject):
         self.vncServer.run(arg)
         # auto stop on exit
         atexit.register(self.stopVNC, force=True)
+
+    @pyqtSlot()
+    def openDisplaySetting(self):
+        # define callbacks
+        def _onConnected():
+            print("External Display Setting opened.")
+        def _onReceived(data):
+            pass
+        def _onEnded(exitCode):
+            print("External Display Setting closed.")
+            self.onDisplaySettingClosed.emit()
+        program_list = ["gnome-control-center display", "arandr"]
+        program = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, None)
+        for arg in program_list:
+            if not shutil.which(arg.split()[0]):
+                continue
+            program.run(arg)
+            break            
 
     @pyqtSlot()
     def stopVNC(self, force=False):
