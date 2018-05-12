@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys, os, subprocess, signal, re, atexit, time, json, shutil
+from pathlib import Path
 from enum import Enum
 from typing import List, Dict
 
@@ -15,7 +16,13 @@ from netifaces import interfaces, ifaddresses, AF_INET
 #-------------------------------------------------------------------------------
 # file path definitions
 #-------------------------------------------------------------------------------
-HOME_PATH = os.getenv('HOME', None)
+# Sanitize environment variables
+# https://wiki.sei.cmu.edu/confluence/display/c/ENV03-C.+Sanitize+the+environment+when+invoking+external+programs
+del os.environ['HOME']  # Delete $HOME env for security reason. This will make
+                # Path.home() to look up in the password directory (pwd module)
+os.environ['PATH'] = os.confstr("CS_PATH")  # Sanitize $PATH
+
+HOME_PATH = str(Path.home())
 if HOME_PATH is not None:
     HOME_PATH = HOME_PATH + "/.virtscreen"
 X11VNC_LOG_PATH = HOME_PATH + "/x11vnc_log.txt"
@@ -46,6 +53,80 @@ class SubprocessWrapper:
     
     def run(self, arg: str) -> str:
         return subprocess.run(arg.split(), stdout=subprocess.PIPE).stdout.decode('utf-8')
+        
+#-------------------------------------------------------------------------------
+# Twisted class
+#-------------------------------------------------------------------------------
+class ProcessProtocol(protocol.ProcessProtocol):
+    def __init__(self, onConnected, onOutReceived, onErrRecevied, onProcessEnded, logfile=None):
+        self.onConnected = onConnected
+        self.onOutReceived = onOutReceived
+        self.onErrRecevied = onErrRecevied
+        self.onProcessEnded = onProcessEnded
+        self.logfile = logfile
+    
+    def run(self, arg: str):
+        """Spawn a process
+        
+        Arguments:
+            arg {str} -- arguments in string
+        """
+
+        args = arg.split()
+        reactor.spawnProcess(self, args[0], args=args, env=os.environ)
+
+    def kill(self):
+        """Kill a spawned process
+        """
+        self.transport.signalProcess('INT')
+
+    def connectionMade(self):
+        print("connectionMade!")
+        self.onConnected()
+        self.transport.closeStdin() # No more input
+
+    def outReceived(self, data):
+        # print("outReceived! with %d bytes!" % len(data))
+        self.onOutReceived(data)
+        if self.logfile is not None:
+            self.logfile.write(data)
+
+    def errReceived(self, data):
+        # print("errReceived! with %d bytes!" % len(data))
+        self.onErrRecevied(data)
+        if self.logfile is not None:
+            self.logfile.write(data)
+
+    def inConnectionLost(self):
+        print("inConnectionLost! stdin is closed! (we probably did it)")
+        pass
+
+    def outConnectionLost(self):
+        print("outConnectionLost! The child closed their stdout!")
+        pass
+
+    def errConnectionLost(self):
+        print("errConnectionLost! The child closed their stderr.")
+        pass
+
+    def processExited(self, reason):
+        exitCode = reason.value.exitCode
+        if exitCode is None:
+            print("Unknown exit")
+            return
+        print("processEnded, status", exitCode)
+
+    def processEnded(self, reason):
+        if self.logfile is not None:
+            self.logfile.close()
+        exitCode = reason.value.exitCode
+        if exitCode is None:
+            print("Unknown exit")
+            self.onProcessEnded(1)
+            return
+        print("processEnded, status", exitCode)
+        print("quitting")
+        self.onProcessEnded(exitCode)
 
 #-------------------------------------------------------------------------------
 # Display properties
@@ -249,80 +330,6 @@ class XRandR(SubprocessWrapper):
         self.call(f"xrandr --delmode {self.virt.name} {self.mode_name}")
         atexit.unregister(self.delete_virtual_screen)
         self._update_screens()
-        
-#-------------------------------------------------------------------------------
-# Twisted class
-#-------------------------------------------------------------------------------
-class ProcessProtocol(protocol.ProcessProtocol):
-    def __init__(self, onConnected, onOutReceived, onErrRecevied, onProcessEnded, logfile=None):
-        self.onConnected = onConnected
-        self.onOutReceived = onOutReceived
-        self.onErrRecevied = onErrRecevied
-        self.onProcessEnded = onProcessEnded
-        self.logfile = logfile
-    
-    def run(self, arg: str):
-        """Spawn a process
-        
-        Arguments:
-            arg {str} -- arguments in string
-        """
-
-        args = arg.split()
-        reactor.spawnProcess(self, args[0], args=args, env=os.environ)
-
-    def kill(self):
-        """Kill a spawned process
-        """
-        self.transport.signalProcess('INT')
-
-    def connectionMade(self):
-        print("connectionMade!")
-        self.onConnected()
-        self.transport.closeStdin() # No more input
-
-    def outReceived(self, data):
-        # print("outReceived! with %d bytes!" % len(data))
-        self.onOutReceived(data)
-        if self.logfile is not None:
-            self.logfile.write(data)
-
-    def errReceived(self, data):
-        # print("errReceived! with %d bytes!" % len(data))
-        self.onErrRecevied(data)
-        if self.logfile is not None:
-            self.logfile.write(data)
-
-    def inConnectionLost(self):
-        print("inConnectionLost! stdin is closed! (we probably did it)")
-        pass
-
-    def outConnectionLost(self):
-        print("outConnectionLost! The child closed their stdout!")
-        pass
-
-    def errConnectionLost(self):
-        print("errConnectionLost! The child closed their stderr.")
-        pass
-
-    def processExited(self, reason):
-        exitCode = reason.value.exitCode
-        if exitCode is None:
-            print("Unknown exit")
-            return
-        print("processEnded, status", exitCode)
-
-    def processEnded(self, reason):
-        if self.logfile is not None:
-            self.logfile.close()
-        exitCode = reason.value.exitCode
-        if exitCode is None:
-            print("Unknown exit")
-            self.onProcessEnded(1)
-            return
-        print("processEnded, status", exitCode)
-        print("quitting")
-        self.onProcessEnded(exitCode)
 
 #-------------------------------------------------------------------------------
 # QML Backend class
