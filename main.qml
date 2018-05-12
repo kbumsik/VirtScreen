@@ -98,22 +98,6 @@ ApplicationWindow {
     // menuBar: MenuBar {
     // }
 
-    header: TabBar {
-        id: tabBar
-        position: TabBar.Footer
-        // Material.primary: Material.Teal
-
-        currentIndex: 0
-
-        TabButton {
-            text: qsTr("Display")
-        }
-
-        TabButton {
-            text: qsTr("VNC")
-        }
-    }
-
     menuBar: ToolBar {
         id: toolbar
         font.weight: Font.Medium
@@ -131,6 +115,22 @@ ApplicationWindow {
                       backend.vncState == Backend.CONNECTED ? "Connected." :
                       "Server state error!"
             }
+        }
+    }
+
+    header: TabBar {
+        id: tabBar
+        position: TabBar.Footer
+        // Material.primary: Material.Teal
+
+        currentIndex: 0
+
+        TabButton {
+            text: qsTr("Display")
+        }
+
+        TabButton {
+            text: qsTr("VNC")
         }
     }
 
@@ -165,6 +165,9 @@ ApplicationWindow {
 
     StackLayout {
         width: parent.width
+        anchors.top: tabBar.bottom
+        anchors.bottom: parent.bottom
+
         currentIndex: tabBar.currentIndex
 
         ColumnLayout {
@@ -433,15 +436,27 @@ ApplicationWindow {
                 }
             }
 
-            ListView {
-                id: ipListView
-                height: 200
+
+            GroupBox {
+                title: "Available IP addresses"
+                anchors.top: vncButton.top
+                anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 anchors.right: parent.right
+                anchors.topMargin: 70
 
-                model: backend.ipAddresses
-                delegate: Text {
-                    text: modelData
+                ColumnLayout {
+                    anchors.fill: parent
+
+                    ListView {
+                        id: ipListView
+                        anchors.fill: parent
+                        
+                        model: backend.ipAddresses
+                        delegate: Label {
+                            text: modelData
+                        }
+                    }
                 }
             }
         }
