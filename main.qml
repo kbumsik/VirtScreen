@@ -21,9 +21,10 @@ ApplicationWindow {
     Material.accent: Material.Teal
     // Material.background: Material.Grey
 
-    property int margin: 8
     width: 380
     height: 525
+    property int margin: 8
+    property int popupWidth: width - 26
 
     // hide screen when loosing focus
     property bool autoClose: true
@@ -193,7 +194,7 @@ ApplicationWindow {
         focus: true
         x: (parent.width - width) / 2
         y: (parent.width - height) / 2 //(window.height) / 2 
-        width: window.width - 26
+        width: popupWidth
 
         ColumnLayout {
             anchors.fill: parent
@@ -235,6 +236,44 @@ ApplicationWindow {
                 onLinkActivated: Qt.openUrlExternally(link)
             }
         }
+    }
+
+    Dialog {
+        id: passwordDialog
+        title: "New password"
+        focus: true
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        x: (parent.width - width) / 2
+        y: (parent.width - height) / 2 //(window.height) / 2 
+        width: popupWidth
+
+        ColumnLayout {
+            anchors.fill: parent
+
+            TextField {
+                id: passwordFIeld
+                focus: true
+                anchors.left: parent.left
+                anchors.right: parent.right
+
+                placeholderText: "New Password";
+                echoMode: TextInput.Password;
+            }
+
+            Keys.onPressed: {
+                event.accepted = true;
+                if (event.key == Qt.Key_Return || event.key == Qt.Key_Enter) {
+                    passwordDialog.accept();
+                }
+            }
+        }
+
+        onAccepted: {
+            backend.createVNCPassword(passwordFIeld.text);
+            passwordFIeld.text = "";
+        }
+        onRejected: passwordFIeld.text = ""
     }
 
     StackLayout {
@@ -458,18 +497,22 @@ ApplicationWindow {
                         anchors.left: parent.left
                         anchors.right: parent.right
 
-                        Label { id: passwordLabel; text: "Password" }
-                        TextField {
-                            anchors.left: passwordLabel.right
-                            anchors.right: parent.right
-                            anchors.margins: margin
+                        Label { text: "Password"; Layout.fillWidth: true }
 
-                            placeholderText: "Password";
-                            text: backend.vncPassword;
-                            echoMode: TextInput.Password;
-                            onTextEdited: {
-                                backend.vncPassword = text;
-                            }
+                        Button {
+                            text: "Delete"
+                            font.capitalization: Font.MixedCase
+                            highlighted: false
+                            enabled: backend.vncUsePassword
+                            onClicked: backend.deleteVNCPassword()
+                        }
+
+                        Button {
+                            text: "New"
+                            font.capitalization: Font.MixedCase
+                            highlighted: true
+                            enabled: !backend.vncUsePassword
+                            onClicked: passwordDialog.open()
                         }
                     }
                 }

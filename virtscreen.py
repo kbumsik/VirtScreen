@@ -354,7 +354,7 @@ class Backend(QObject):
     _virtScreenIndex: int
     # VNC server properties
     _vncPort: int
-    _vncPassword: str = ""
+    _vncUsePassword: bool = False
     _vncState: VNCState
     _vncAutoStart: bool
     _ipAddresses: List[str] = []
@@ -367,6 +367,7 @@ class Backend(QObject):
     # Signals
     onVirtScreenCreatedChanged = pyqtSignal(bool)
     onVirtScreenIndexChanged = pyqtSignal(int)
+    onVncUsePasswordChanged = pyqtSignal(bool)
     onVncStateChanged = pyqtSignal(VNCState)
     onVncAutoStartChanged = pyqtSignal(bool)
     onIPAddressesChanged = pyqtSignal()
@@ -453,12 +454,18 @@ class Backend(QObject):
     def vncPort(self, port):
         self._vncPort = port
 
-    @pyqtProperty(str)
-    def vncPassword(self):
-        return self._vncPassword
-    @vncPassword.setter
-    def vncPassword(self, vncPassword):
-        self._vncPassword = vncPassword
+    @pyqtProperty(bool, notify=onVncUsePasswordChanged)
+    def vncUsePassword(self):
+        if os.path.isfile(X11VNC_PASSWORD_PATH):
+            self._vncUsePassword = True
+        else:
+            if self._vncUsePassword:
+                self.vncUsePassword = False
+        return self._vncUsePassword
+    @vncUsePassword.setter
+    def vncUsePassword(self, use):
+        self._vncUsePassword = use
+        self.onVncUsePasswordChanged.emit(use)
 
     @pyqtProperty(VNCState, notify=onVncStateChanged)
     def vncState(self):
@@ -514,6 +521,27 @@ class Backend(QObject):
         self.xrandr.delete_virtual_screen()
         self.virtScreenCreated = False
     
+    @pyqtSlot(str)
+    def createVNCPassword(self, password):
+        if password:
+            p = SubprocessWrapper()
+            try:
+                p.run(f"x11vnc -storepasswd {password} {X11VNC_PASSWORD_PATH}")
+            except:
+                print("Failed creating password")
+                return
+            self.vncUsePassword = True
+        else:
+            print("Empty password")
+
+    @pyqtSlot()
+    def deleteVNCPassword(self):
+        if os.path.isfile(X11VNC_PASSWORD_PATH):
+            os.remove(X11VNC_PASSWORD_PATH)
+            self.vncUsePassword = False
+        else:
+            print("Failed deleting the password file")
+
     @pyqtSlot()
     def startVNC(self):
         # Check if a virtual screen created
@@ -538,23 +566,13 @@ class Backend(QObject):
             print("VNC Exited.")
             self.vncState = self.VNCState.OFF
             atexit.unregister(self.stopVNC)
-        # Set password
-        password = False
-        if self.vncPassword:
-            print("There is password. Creating.")
-            password = True
-            p = SubprocessWrapper()
-            try:
-                p.run(f"x11vnc -storepasswd {self.vncPassword} {X11VNC_PASSWORD_PATH}")
-            except:
-                password = False
         logfile = open(X11VNC_LOG_PATH, "wb")
         self.vncServer = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, logfile)
         port = self.vncPort
         virt = self.xrandr.get_virtual_screen()
         clip = f"{virt.width}x{virt.height}+{virt.x_offset}+{virt.y_offset}"
         arg = f"x11vnc -multiptr -repeat -rfbport {port} -clip {clip}"
-        if password:
+        if self.vncUsePassword:
             arg += f" -rfbauth {X11VNC_PASSWORD_PATH}"
         self.vncServer.run(arg)
         # auto stop on exit
