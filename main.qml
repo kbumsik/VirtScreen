@@ -5,10 +5,7 @@ import Qt.labs.platform 1.0
 import VirtScreen.DisplayProperty 1.0
 import VirtScreen.Backend 1.0
 
-Loader {
-    id: mainLoader
-    active: false
-    source: "mainWindow.qml"
+Item {
     property alias window: mainLoader.item
     
     // virtscreen.py backend.
@@ -56,7 +53,52 @@ Loader {
         }
         signal.connect(f);
     }
-    
+
+    Loader {
+        id: mainLoader
+        active: false
+        source: "mainWindow.qml"
+
+        onStatusChanged: {
+            console.log("Status changed", status);
+            if (status == Loader.Null) {
+                gc();
+                // This cause memory leak at this moment.
+                // backend.clearCache();
+            }
+        }
+
+        onLoaded: {
+            window.onVisibleChanged.connect(function(visible) {
+                if (!visible) {
+                    console.log('hiding');
+                    console.log("unloading...");
+                    mainLoader.active = false;
+                }
+            });
+            // Move window to the corner of the primary display
+            var primary = backend.primary;
+            var width = primary.width;
+            var height = primary.height;
+            var cursor_x = backend.cursor_x - primary.x_offset;
+            var cursor_y = backend.cursor_y - primary.y_offset;
+            var x_mid = width / 2;
+            var y_mid = height / 2;
+            var x = width - window.width; //(cursor_x > x_mid)? width - window.width : 0;
+            var y = (cursor_y > y_mid)? height - window.height : 0;
+            x += primary.x_offset;
+            y += primary.y_offset;
+            window.x = x;
+            window.y = y;
+            window.show();
+            window.raise();
+            window.requestActivate();
+            timer.setTimeout (function() {
+                sysTrayIcon.clicked = false;
+            }, 200);
+        }
+    }
+
     // Sytray Icon
     SystemTrayIcon {
         id: sysTrayIcon
@@ -88,7 +130,6 @@ Loader {
         menu: Menu {
             MenuItem {
                 id: vncStateText
-                enabled: false
                 text: !backend.virtScreenCreated ? "Enable Virtual Screen first." :
                       backend.vncState == Backend.OFF ? "Turn on VNC Server in the VNC tab." :
                       backend.vncState == Backend.WAITING ? "VNC Server is waiting for a client..." :
@@ -148,40 +189,4 @@ Loader {
         }
     }
 
-    onStatusChanged: {
-        console.log("Status changed", status);
-        if (status == Loader.Null) {
-            gc();
-        }
-    }
-
-    onLoaded: {
-        window.onVisibleChanged.connect(function(visible) {
-            if (!visible) {
-                console.log('hiding');
-                console.log("unloading...");
-                mainLoader.active = false;
-            }
-        });
-        // Move window to the corner of the primary display
-        var primary = backend.primary;
-        var width = primary.width;
-        var height = primary.height;
-        var cursor_x = backend.cursor_x - primary.x_offset;
-        var cursor_y = backend.cursor_y - primary.y_offset;
-        var x_mid = width / 2;
-        var y_mid = height / 2;
-        var x = width - window.width; //(cursor_x > x_mid)? width - window.width : 0;
-        var y = (cursor_y > y_mid)? height - window.height : 0;
-        x += primary.x_offset;
-        y += primary.y_offset;
-        window.x = x;
-        window.y = y;
-        window.show();
-        window.raise();
-        window.requestActivate();
-        timer.setTimeout (function() {
-            sysTrayIcon.clicked = false;
-        }, 200);
-    }
 }

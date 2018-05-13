@@ -622,6 +622,10 @@ class Backend(QObject):
             print("stopVNC called while it is not running")
 
     @pyqtSlot()
+    def clearCache(self):
+        engine.clearComponentCache()
+
+    @pyqtSlot()
     def quitProgram(self):
         # Save settings first
         with open(CONFIG_PATH, 'w') as f:
