@@ -308,9 +308,7 @@ ApplicationWindow {
                 onClicked: {
                     busyDialog.open();
                     virtScreenAction.onTriggered();
-                }
-                Component.onCompleted: {
-                    backend.onVirtScreenCreatedChanged.connect(function(created) {
+                    connectOnce(backend.onVirtScreenCreatedChanged, function(created) {
                         busyDialog.close();
                     });
                 }
