@@ -131,18 +131,17 @@ class ProcessProtocol(protocol.ProcessProtocol):
 #-------------------------------------------------------------------------------
 # Display properties
 #-------------------------------------------------------------------------------
-class DisplayProperty(QObject):
-    _name: str
-    _primary: bool
-    _connected: bool
-    _active: bool
-    _width: int
-    _height: int
-    _x_offset: int
-    _y_offset: int
-
+class Display(object):
+    __slots__ = ['name', 'primary', 'connected', 'active', 'width', 'height', 'x_offset', 'y_offset']
     def __init__(self, parent=None):
-        super(DisplayProperty, self).__init__(parent)
+        self.name: str = None
+        self.primary: bool = False
+        self.connected: bool = False
+        self.active: bool = False
+        self.width: int = 0
+        self.height: int = 0
+        self.x_offset: int = 0
+        self.y_offset: int = 0
 
     def __str__(self):
         ret = f"{self.name}"
@@ -155,64 +154,76 @@ class DisplayProperty(QObject):
         if self.active:
             ret += f" {self.width}x{self.height}+{self.x_offset}+{self.y_offset}"
         else:
-            ret += " not active"
+            ret += f" not active {self.width}x{self.height}"
         return ret
-    
+
+
+class DisplayProperty(QObject):
+    _display: Display
+
+    def __init__(self, display: Display, parent=None):
+        super(DisplayProperty, self).__init__(parent)
+        self._display = display
+
+    @property
+    def display(self):
+        return self._display
+
     @pyqtProperty(str, constant=True)
     def name(self):
-        return self._name
+        return self._display.name
     @name.setter
     def name(self, name):
-        self._name = name
+        self._display.name = name
 
     @pyqtProperty(bool, constant=True)
     def primary(self):
-        return self._primary
+        return self._display.primary
     @primary.setter
     def primary(self, primary):
-        self._primary = primary
+        self._display.primary = primary
 
     @pyqtProperty(bool, constant=True)
     def connected(self):
-        return self._connected
+        return self._display.connected
     @connected.setter
     def connected(self, connected):
-        self._connected = connected
+        self._display.connected = connected
 
     @pyqtProperty(bool, constant=True)
     def active(self):
-        return self._active
+        return self._display.active
     @active.setter
     def active(self, active):
-        self._active = active
+        self._display.active = active
 
     @pyqtProperty(int, constant=True)
     def width(self):
-        return self._width
+        return self._display.width
     @width.setter
     def width(self, width):
-        self._width = width
+        self._display.width = width
 
     @pyqtProperty(int, constant=True)
     def height(self):
-        return self._height
+        return self._display.height
     @height.setter
     def height(self, height):
-        self._height = height
+        self._display.height = height
 
     @pyqtProperty(int, constant=True)
     def x_offset(self):
-        return self._x_offset
+        return self._display.x_offset
     @x_offset.setter
     def x_offset(self, x_offset):
-        self._x_offset = x_offset
+        self._display.x_offset = x_offset
 
     @pyqtProperty(int, constant=True)
     def y_offset(self):
-        return self._y_offset
+        return self._display.y_offset
     @y_offset.setter
     def y_offset(self, y_offset):
-        self._y_offset = y_offset
+        self._display.y_offset = y_offset
 
 #-------------------------------------------------------------------------------
 # Screen adjustment class
@@ -224,9 +235,9 @@ class XRandR(SubprocessWrapper):
     def __init__(self):
         super(XRandR, self).__init__()
         self.mode_name: str
-        self.screens: List[DisplayProperty] = []
-        self.virt: DisplayProperty() = None
-        self.primary: DisplayProperty() = None
+        self.screens: List[Display] = []
+        self.virt: Display() = None
+        self.primary: Display() = None
         self.virt_idx: int = None
         self.primary_idx: int = None
         # Primary display
@@ -241,7 +252,7 @@ class XRandR(SubprocessWrapper):
         pattern = re.compile(r"^(\S*)\s+(connected|disconnected)\s+((primary)\s+)?"
                         r"((\d+)x(\d+)\+(\d+)\+(\d+)\s+)?.*$", re.M)
         for idx, match in enumerate(pattern.finditer(output)):
-            screen = DisplayProperty()
+            screen = Display()
             screen.name = match.group(1)
             if (self.virt_idx is None) and (screen.name == self.DEFAULT_VIRT_SCREEN):
                 self.virt_idx = idx
@@ -304,11 +315,11 @@ class XRandR(SubprocessWrapper):
         self.delete_virtual_screen()
         os._exit(0)
 
-    def get_primary_screen(self) -> DisplayProperty:
+    def get_primary_screen(self) -> Display:
         self._update_screens()
         return self.primary
 
-    def get_virtual_screen(self) -> DisplayProperty:
+    def get_virtual_screen(self) -> Display:
         self._update_screens()
         return self.virt
     
@@ -345,7 +356,8 @@ class Backend(QObject):
     Q_ENUMS(VNCState)
     # Virtual screen properties
     xrandr: XRandR
-    _virt: DisplayProperty = DisplayProperty()
+    _virt: Display = Display()
+    _virtProp: DisplayProperty
     _portrait: bool
     _hidpi: bool
     _virtScreenCreated: bool = False
@@ -357,7 +369,7 @@ class Backend(QObject):
     _vncState: VNCState
     _vncAutoStart: bool
     # Primary screen and mouse posistion
-    primary: DisplayProperty()
+    _primaryProp: DisplayProperty
     cursor_x: int
     cursor_y: int
     vncServer: ProcessProtocol
@@ -377,8 +389,8 @@ class Backend(QObject):
         try:
             with open(CONFIG_PATH, "r") as f:
                 settings = json.load(f)
-                self.virt.width = settings['virt']['width']
-                self.virt.height = settings['virt']['height']
+                self._virt.width = settings['virt']['width']
+                self._virt.height = settings['virt']['height']
                 self._portrait = settings['virt']['portrait']
                 self._hidpi = settings['virt']['hidpi']
                 self._vncPort = settings['vnc']['port']
@@ -387,13 +399,14 @@ class Backend(QObject):
             print("Default Setting used.")
             with open(DEFAULT_CONFIG_PATH, "r") as f:
                 settings = json.load(f)
-                self.virt.width = settings['virt']['width']
-                self.virt.height = settings['virt']['height']
+                self._virt.width = settings['virt']['width']
+                self._virt.height = settings['virt']['height']
                 self._portrait = settings['virt']['portrait']
                 self._hidpi = settings['virt']['hidpi']
                 self._vncPort = settings['vnc']['port']
                 self._vncAutoStart = settings['vnc']['autostart']
         # create objects
+        self._virtProp = DisplayProperty(self._virt)
         self._vncState = self.VNCState.OFF
         self.xrandr = XRandR()
         self._virtScreenIndex = self.xrandr.virt_idx
@@ -401,10 +414,10 @@ class Backend(QObject):
     # Qt properties
     @pyqtProperty(DisplayProperty)
     def virt(self):
-        return self._virt
+        return self._virtProp
     @virt.setter
     def virt(self, virt):
-        self._virt = virt
+        self._virtProp = virt
 
     @pyqtProperty(bool)
     def portrait(self):
@@ -430,7 +443,7 @@ class Backend(QObject):
 
     @pyqtProperty(QQmlListProperty)
     def screens(self):
-        return QQmlListProperty(DisplayProperty, self, self.xrandr.screens)
+        return QQmlListProperty(DisplayProperty, self, [DisplayProperty(x) for x in self.xrandr.screens])
 
     @pyqtProperty(int, notify=onVirtScreenIndexChanged)
     def virtScreenIndex(self):
@@ -492,7 +505,8 @@ class Backend(QObject):
     
     @pyqtProperty(DisplayProperty)
     def primary(self):
-        return self.xrandr.get_primary_screen()
+        self._primaryProp = DisplayProperty(self.xrandr.get_primary_screen())
+        return self._primaryProp
 
     @pyqtProperty(int)
     def cursor_x(self):
@@ -508,7 +522,7 @@ class Backend(QObject):
     @pyqtSlot()
     def createVirtScreen(self):
         print("Creating a Virtual Screen...")
-        self.xrandr.create_virtual_screen(self.virt.width, self.virt.height, self.portrait, self.hidpi)
+        self.xrandr.create_virtual_screen(self._virt.width, self._virt.height, self.portrait, self.hidpi)
         self.virtScreenCreated = True
         
     @pyqtSlot()
@@ -613,8 +627,8 @@ class Backend(QObject):
         with open(CONFIG_PATH, 'w') as f:
             settings = {}
             settings['virt'] = {}
-            settings['virt']['width'] = self.virt.width
-            settings['virt']['height'] = self.virt.height
+            settings['virt']['width'] = self._virt.width
+            settings['virt']['height'] = self._virt.height
             settings['virt']['portrait'] = self._portrait
             settings['virt']['hidpi'] = self._hidpi
             settings['vnc'] = {}
