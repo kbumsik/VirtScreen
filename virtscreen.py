@@ -344,24 +344,22 @@ class Backend(QObject):
 
     Q_ENUMS(VNCState)
     # Virtual screen properties
-    settings: Dict
     xrandr: XRandR
     _virt: DisplayProperty = DisplayProperty()
     _portrait: bool
     _hidpi: bool
     _virtScreenCreated: bool = False
-    _screens: List[DisplayProperty]
+    screens: List[DisplayProperty]
     _virtScreenIndex: int
     # VNC server properties
     _vncPort: int
     _vncUsePassword: bool = False
     _vncState: VNCState
     _vncAutoStart: bool
-    _ipAddresses: List[str] = []
     # Primary screen and mouse posistion
-    _primary: DisplayProperty()
-    _cursor_x: int
-    _cursor_y: int
+    primary: DisplayProperty()
+    cursor_x: int
+    cursor_y: int
     vncServer: ProcessProtocol
 
     # Signals
@@ -378,30 +376,27 @@ class Backend(QObject):
         # Read JSON to load variables
         try:
             with open(CONFIG_PATH, "r") as f:
-                self.settings = json.load(f)
-                self.virt.width = self.settings['virt']['width']
-                self.virt.height = self.settings['virt']['height']
-                self._portrait = self.settings['virt']['portrait']
-                self._hidpi = self.settings['virt']['hidpi']
-                self._vncPort = self.settings['vnc']['port']
-                self._vncAutoStart = self.settings['vnc']['autostart']
+                settings = json.load(f)
+                self.virt.width = settings['virt']['width']
+                self.virt.height = settings['virt']['height']
+                self._portrait = settings['virt']['portrait']
+                self._hidpi = settings['virt']['hidpi']
+                self._vncPort = settings['vnc']['port']
+                self._vncAutoStart = settings['vnc']['autostart']
         except (FileNotFoundError, json.JSONDecodeError, KeyError):
             print("Default Setting used.")
             with open(DEFAULT_CONFIG_PATH, "r") as f:
-                self.settings = json.load(f)
-                self.virt.width = self.settings['virt']['width']
-                self.virt.height = self.settings['virt']['height']
-                self._portrait = self.settings['virt']['portrait']
-                self._hidpi = self.settings['virt']['hidpi']
-                self._vncPort = self.settings['vnc']['port']
-                self._vncAutoStart = self.settings['vnc']['autostart']
+                settings = json.load(f)
+                self.virt.width = settings['virt']['width']
+                self.virt.height = settings['virt']['height']
+                self._portrait = settings['virt']['portrait']
+                self._hidpi = settings['virt']['hidpi']
+                self._vncPort = settings['vnc']['port']
+                self._vncAutoStart = settings['vnc']['autostart']
         # create objects
         self._vncState = self.VNCState.OFF
         self.xrandr = XRandR()
-        self._screens = self.xrandr.screens
         self._virtScreenIndex = self.xrandr.virt_idx
-        self._primary: DisplayProperty() = self.xrandr.get_primary_screen()
-        self.updateIPAddresses()
         
     # Qt properties
     @pyqtProperty(DisplayProperty)
@@ -435,7 +430,7 @@ class Backend(QObject):
 
     @pyqtProperty(QQmlListProperty)
     def screens(self):
-        return QQmlListProperty(DisplayProperty, self, self._screens)
+        return QQmlListProperty(DisplayProperty, self, self.xrandr.screens)
 
     @pyqtProperty(int, notify=onVirtScreenIndexChanged)
     def virtScreenIndex(self):
@@ -485,24 +480,29 @@ class Backend(QObject):
 
     @pyqtProperty('QStringList', notify=onIPAddressesChanged)
     def ipAddresses(self):
-        return self._ipAddresses
+        for interface in interfaces():
+            if interface == 'lo':
+                continue
+            addresses = ifaddresses(interface).get(AF_INET, None)
+            if addresses is None:
+                continue
+            for link in addresses:
+                if link is not None:
+                    yield link['addr']
     
     @pyqtProperty(DisplayProperty)
     def primary(self):
-        self._primary = self.xrandr.get_primary_screen()
-        return self._primary
+        return self.xrandr.get_primary_screen()
 
     @pyqtProperty(int)
     def cursor_x(self):
         cursor = QCursor().pos()
-        self._cursor_x = cursor.x()
-        return self._cursor_x
+        return cursor.x()
 
     @pyqtProperty(int)
     def cursor_y(self):
         cursor = QCursor().pos()
-        self._cursor_y = cursor.y()
-        return self._cursor_y
+        return cursor.y()
     
     # Qt Slots
     @pyqtSlot()
@@ -608,30 +608,19 @@ class Backend(QObject):
             print("stopVNC called while it is not running")
 
     @pyqtSlot()
-    def updateIPAddresses(self):
-        self._ipAddresses.clear()
-        for interface in interfaces():
-            if interface == 'lo':
-                continue
-            addresses = ifaddresses(interface).get(AF_INET, None)
-            if addresses is None:
-                continue
-            for link in addresses:
-                if link is not None:
-                    self._ipAddresses.append(link['addr'])
-        self.onIPAddressesChanged.emit()
-
-    @pyqtSlot()
     def quitProgram(self):
         # Save settings first
         with open(CONFIG_PATH, 'w') as f:
-            self.settings['virt']['width'] = self.virt.width
-            self.settings['virt']['height'] = self.virt.height
-            self.settings['virt']['portrait'] = self._portrait
-            self.settings['virt']['hidpi'] = self._hidpi
-            self.settings['vnc']['port'] = self._vncPort
-            self.settings['vnc']['autostart'] = self._vncAutoStart
-            json.dump(self.settings, f, sort_keys=True, indent=4)
+            settings = {}
+            settings['virt'] = {}
+            settings['virt']['width'] = self.virt.width
+            settings['virt']['height'] = self.virt.height
+            settings['virt']['portrait'] = self._portrait
+            settings['virt']['hidpi'] = self._hidpi
+            settings['vnc'] = {}
+            settings['vnc']['port'] = self._vncPort
+            settings['vnc']['autostart'] = self._vncAutoStart
+            json.dump(settings, f, sort_keys=True, indent=4)
         self.blockSignals(True) # This will prevent invoking auto-restart or etc.
         QApplication.instance().quit()
 
@@ -646,23 +635,23 @@ if __name__ == '__main__':
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
         QMessageBox.critical(None, "VirtScreen",
-                "I couldn't detect any system tray on this system.")
+                "Cannot detect system tray on this system.")
         sys.exit(1)
 
     if os.environ['XDG_SESSION_TYPE'] == 'wayland':
         QMessageBox.critical(None, "VirtScreen",
                             "Currently Wayland is not supported")
         sys.exit(1)
-    if HOME_PATH is None:
+    if not HOME_PATH:
         QMessageBox.critical(None, "VirtScreen",
-                            "VirtScreen cannot detect $HOME")
+                            "Cannot detect home directory.")
         sys.exit(1)
     if not os.path.exists(HOME_PATH):
         try:
             os.makedirs(HOME_PATH)
         except:
             QMessageBox.critical(None, "VirtScreen",
-                                "VirtScreen cannot create ~/.virtscreen")
+                                "Cannot create ~/.virtscreen")
             sys.exit(1)
     
     import qt5reactor # pylint: disable=E0401
@@ -682,7 +671,7 @@ if __name__ == '__main__':
     engine = QQmlApplicationEngine()
     engine.load(QUrl('main.qml'))
     if not engine.rootObjects():
-        QMessageBox.critical(None, "VirtScreen", "Failed to load qml")
+        QMessageBox.critical(None, "VirtScreen", "Failed to load QML")
         sys.exit(1)
     sys.exit(app.exec_())
     reactor.run()
