@@ -57,7 +57,7 @@ Item {
     Loader {
         id: mainLoader
         active: false
-        source: "mainWindow.qml"
+        source: "qml/AppWindow.qml"
 
         onStatusChanged: {
             console.log("Loader Status Changed.", status);
@@ -178,6 +178,10 @@ Item {
             }
             MenuItem {
                 separator: true
+            }
+            MenuItem {
+                text: "Open VirtScreen"
+                onTriggered: sysTrayIcon.onActivated(SystemTrayIcon.Trigger)
             }
             MenuItem {
                 id: quitAction
