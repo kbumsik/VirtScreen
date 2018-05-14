@@ -75,9 +75,7 @@ ApplicationWindow {
 
                     MenuItem {
                         text: qsTr("&Quit")
-                        onTriggered: {
-                            backend.quitProgram();
-                        }
+                        onTriggered: quitAction.onTriggered()
                     }
                 }
             }
@@ -227,13 +225,13 @@ ApplicationWindow {
                     RowLayout {
                         Label { text: "Width"; Layout.fillWidth: true }
                         SpinBox {
-                            value: backend.virt.width
+                            value: settings.virt.width
                             from: 640
                             to: 1920
                             stepSize: 1
                             editable: true
                             onValueModified: {
-                                backend.virt.width = value;
+                                settings.virt.width = value;
                             }
                             textFromValue: function(value, locale) { return value; }
                         }
@@ -241,13 +239,13 @@ ApplicationWindow {
                     RowLayout {
                         Label { text: "Height"; Layout.fillWidth: true }
                         SpinBox {
-                            value: backend.virt.height
+                            value: settings.virt.height
                             from: 360
                             to: 1080
                             stepSize : 1
                             editable: true
                             onValueModified: {
-                                backend.virt.height = value;
+                                settings.virt.height = value;
                             }
                             textFromValue: function(value, locale) { return value; }
                         }
@@ -255,18 +253,18 @@ ApplicationWindow {
                     RowLayout {
                         Label { text: "Portrait Mode"; Layout.fillWidth: true }
                         Switch {
-                            checked: backend.portrait
+                            checked: settings.virt.portrait
                             onCheckedChanged: {
-                                backend.portrait = checked;
+                                settings.virt.portrait = checked;
                             }
                         }
                     }
                     RowLayout {
                         Label { text: "HiDPI (2x resolution)"; Layout.fillWidth: true }
                         Switch {
-                            checked: backend.hidpi
+                            checked: settings.virt.hidpi
                             onCheckedChanged: {
-                                backend.hidpi = checked;
+                                settings.virt.hidpi = checked;
                             }
                         }
                     }
@@ -327,8 +325,8 @@ ApplicationWindow {
                     if (backend.vncState != Backend.OFF) {
                         console.log("vnc is running");
                         var restoreVNC = true;
-                        if (backend.vncAutoStart) {
-                            backend.vncAutoStart = false;
+                        if (autostart) {
+                            autostart = false;
                             var restoreAutoStart = true;
                         }
                     }
@@ -336,10 +334,10 @@ ApplicationWindow {
                         window.autoClose = true;
                         busyDialog.close();
                         if (restoreAutoStart) {
-                            backend.vncAutoStart = true;
+                            autostart = true;
                         }
                         if (restoreVNC) {
-                            backend.startVNC();
+                            backend.startVNC(settings.vnc.port);
                         }
                     });
                     backend.stopVNC();
@@ -362,13 +360,13 @@ ApplicationWindow {
                     RowLayout {
                         Label { text: "Port"; Layout.fillWidth: true }
                         SpinBox {
-                            value: backend.vncPort
+                            value: settings.vnc.port
                             from: 1
                             to: 65535
                             stepSize: 1
                             editable: true
                             onValueModified: {
-                                backend.vncPort = value;
+                                settings.vnc.port = value;
                             }
                             textFromValue: function(value, locale) { return value; }
                         }
@@ -413,13 +411,13 @@ ApplicationWindow {
                 anchors.topMargin: vncButton.height - 10
                 Label { text: "Auto start"; }
                 Switch {
-                    checked: backend.vncAutoStart
+                    checked: autostart
                     onToggled: {
+                        autostart = checked;
                         if ((checked == true) && (backend.vncState == Backend.OFF) && 
                                 backend.virtScreenCreated) {
-                            backend.startVNC();
+                            backend.startVNC(settings.vnc.port);
                         }
-                        backend.vncAutoStart = checked;
                     }
                 }
             }

@@ -7,28 +7,28 @@ import VirtScreen.Backend 1.0
 
 Item {
     property alias window: mainLoader.item
-    
+    property var settings: JSON.parse(backend.settings)
+    property bool autostart: settings.vnc.autostart
+
+    function switchVNC () {
+        if ((backend.vncState == Backend.OFF) && backend.virtScreenCreated) {
+            backend.startVNC(settings.vnc.port);
+        }
+    }
+
+    onAutostartChanged: {
+        if (autostart) {
+            backend.onVirtScreenCreatedChanged.connect(switchVNC);
+            backend.onVncStateChanged.connect(switchVNC);
+        } else {
+            backend.onVirtScreenCreatedChanged.disconnect(switchVNC);
+            backend.onVncStateChanged.disconnect(switchVNC);
+        }
+    }
+
     // virtscreen.py backend.
     Backend {
         id: backend
-        function switchVNC () {
-            if ((backend.vncState == Backend.OFF) && backend.virtScreenCreated) {
-                backend.startVNC();
-            }
-        }
-        onVncAutoStartChanged: {
-            if (vncAutoStart) {
-                onVirtScreenCreatedChanged.connect(switchVNC);
-                onVncStateChanged.connect(switchVNC);
-            } else {
-                onVirtScreenCreatedChanged.disconnect(switchVNC);
-                onVncStateChanged.disconnect(switchVNC);
-            }
-        }
-        Component.onCompleted: {
-            // force emit signal on load 
-            vncAutoStart = vncAutoStart;
-        }
     }
 
     // Timer object and function
@@ -140,23 +140,24 @@ Item {
             MenuItem {
                 id: virtScreenAction
                 text: backend.virtScreenCreated ? "Disable Virtual Screen" : "Enable Virtual Screen"
-                enabled:backend.vncAutoStart ? true :
-                        backend.vncState == Backend.OFF ? true : false
+                enabled: autostart ? true :
+                         backend.vncState == Backend.OFF ? true : false
                 onTriggered: {
                     // Give a very short delay to show busyDialog.
                     timer.setTimeout (function() {
                         if (!backend.virtScreenCreated) {
-                            backend.createVirtScreen();
+                            backend.createVirtScreen(settings.virt.width, settings.virt.height,
+                                                    settings.virt.portrait, settings.virt.hidpi);
                         } else {
                             // If auto start enabled, stop VNC first then 
-                            if (backend.vncAutoStart && (backend.vncState != Backend.OFF)) {
-                                backend.vncAutoStart = false;
+                            if (autostart && (backend.vncState != Backend.OFF)) {
+                                autostart = false;
                                 connectOnce(backend.onVncStateChanged, function() {
                                     console.log("autoOff called here", backend.vncState);
                                     if (backend.vncState == Backend.OFF) {
                                         console.log("Yes. Delete it");
                                         backend.deleteVirtScreen();
-                                        backend.vncAutoStart = true;
+                                        autostart = true;
                                     }
                                 });
                                 backend.stopVNC();
@@ -169,18 +170,21 @@ Item {
             }
             MenuItem {
                 id: vncAction
-                text: backend.vncAutoStart ? "Auto start enabled" : 
+                text: autostart ? "Auto start enabled" : 
                       backend.vncState == Backend.OFF ? "Start VNC Server" : "Stop VNC Server"
-                enabled: backend.vncAutoStart ? false : 
+                enabled: autostart ? false : 
                          backend.virtScreenCreated ? true : false
-                onTriggered: backend.vncState == Backend.OFF ? backend.startVNC() : backend.stopVNC()
+                onTriggered: backend.vncState == Backend.OFF ? backend.startVNC(settings.vnc.port) : backend.stopVNC()
             }
             MenuItem {
                 separator: true
             }
             MenuItem {
+                id: quitAction
                 text: qsTr("&Quit")
                 onTriggered: {
+                    settings.vnc.autostart = autostart;
+                    backend.settings = JSON.stringify(settings, null, 4);
                     backend.quitProgram();
                 }
             }
