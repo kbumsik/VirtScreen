@@ -105,6 +105,15 @@ ApplicationWindow {
     //     width: 200
     // }
 
+    ProgressBar {
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        z: 1
+        indeterminate: backend.vncState == Backend.WAITING
+        value: backend.vncState == Backend.CONNECTED ? 1 : 0
+    }
+
     Popup {
         id: busyDialog
         modal: true
