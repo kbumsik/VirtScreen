@@ -18,8 +18,8 @@ ApplicationWindow {
     // Material.background: Material.Grey
 
     width: 380
-    height: 525
-    property int margin: 8
+    height: 540
+    property int margin: 10
     property int popupWidth: width - 26
 
     // hide screen when loosing focus
@@ -113,7 +113,6 @@ ApplicationWindow {
         y: parent.height / 2 - height
         BusyIndicator {
             anchors.fill: parent
-            Material.accent: Material.Cyan
             running: true
         }
         background: Rectangle {
@@ -203,21 +202,21 @@ ApplicationWindow {
         }
         onRejected: passwordFIeld.text = ""
     }
-
-    StackLayout {
-        width: parent.width
+    
+    SwipeView {
         anchors.top: tabBar.bottom
         anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.margins: margin
+        clip: true
 
         currentIndex: tabBar.currentIndex
 
         ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: margin
             GroupBox {
                 title: "Virtual Display"
-                anchors.left: parent.left
-                anchors.right: parent.right
+                Layout.fillWidth: true
                 enabled: backend.virtScreenCreated ? false : true
                 ColumnLayout {
                     anchors.left: parent.left
@@ -294,65 +293,65 @@ ApplicationWindow {
                     }
                 }
             }
-            Button {
-                id: virtScreenButton
-                text: virtScreenAction.text
-                highlighted: true
-                anchors.left: parent.left
-                anchors.right: parent.right
-                // Material.accent: Material.Teal
-                // Material.theme: Material.Dark
-                enabled: virtScreenAction.enabled
-                onClicked: {
-                    busyDialog.open();
-                    virtScreenAction.onTriggered();
-                    connectOnce(backend.onVirtScreenCreatedChanged, function(created) {
-                        busyDialog.close();
-                    });
-                }
-            }
-            Button {
-                id: displaySettingButton
-                text: "Open Display Setting"
-                anchors.left: parent.left
-                anchors.right: parent.right
-                // Material.accent: Material.Teal
-                // Material.theme: Material.Dark
-                enabled: backend.virtScreenCreated ? true : false
-                onClicked: {
-                    busyDialog.open();
-                    window.autoClose = false;
-                    if (backend.vncState != Backend.OFF) {
-                        console.log("vnc is running");
-                        var restoreVNC = true;
-                        if (autostart) {
-                            autostart = false;
-                            var restoreAutoStart = true;
-                        }
+
+            ColumnLayout {
+                Layout.margins: margin / 2
+                Button {
+                    id: virtScreenButton
+                    Layout.fillWidth: true
+                    text: virtScreenAction.text
+                    highlighted: true
+                    enabled: virtScreenAction.enabled
+                    onClicked: {
+                        busyDialog.open();
+                        virtScreenAction.onTriggered();
+                        connectOnce(backend.onVirtScreenCreatedChanged, function(created) {
+                            busyDialog.close();
+                        });
                     }
-                    connectOnce(backend.onDisplaySettingClosed, function() {
-                        window.autoClose = true;
-                        busyDialog.close();
-                        if (restoreAutoStart) {
-                            autostart = true;
-                        }
-                        if (restoreVNC) {
-                            backend.startVNC(settings.vnc.port);
-                        }
-                    });
-                    backend.stopVNC();
-                    backend.openDisplaySetting();
                 }
+                Button {
+                    id: displaySettingButton
+                    Layout.fillWidth: true
+                    text: "Open Display Setting"
+                    enabled: backend.virtScreenCreated ? true : false
+                    onClicked: {
+                        busyDialog.open();
+                        window.autoClose = false;
+                        if (backend.vncState != Backend.OFF) {
+                            console.log("vnc is running");
+                            var restoreVNC = true;
+                            if (autostart) {
+                                autostart = false;
+                                var restoreAutoStart = true;
+                            }
+                        }
+                        connectOnce(backend.onDisplaySettingClosed, function() {
+                            window.autoClose = true;
+                            busyDialog.close();
+                            if (restoreAutoStart) {
+                                autostart = true;
+                            }
+                            if (restoreVNC) {
+                                backend.startVNC(settings.vnc.port);
+                            }
+                        });
+                        backend.stopVNC();
+                        backend.openDisplaySetting();
+                    }
+                }      
+            }
+
+            RowLayout {
+                // Empty layout
+                Layout.fillHeight: true
             }
         }
 
         ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: margin
             GroupBox {
                 title: "VNC Server"
-                anchors.left: parent.left
-                anchors.right: parent.right
+                Layout.fillWidth: true
                 enabled: backend.vncState == Backend.OFF ? true : false
                 ColumnLayout {
                     anchors.left: parent.left
@@ -392,25 +391,19 @@ ApplicationWindow {
                     }
                 }
             }
-            Button {
-                id: vncButton
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottomMargin: 0
-                highlighted: true
-                text: vncAction.text
-                enabled: vncAction.enabled
-                // Material.background: Material.Teal
-                // Material.foreground: Material.Grey
-                onClicked: vncAction.onTriggered()
-            }
+
             RowLayout {
-                id: autoSwitchLayout
-                anchors.top: vncButton.top
-                anchors.right: parent.right
-                anchors.topMargin: vncButton.height - 10
-                Label { text: "Auto start"; }
-                Switch {
+                Layout.fillWidth: true
+                Layout.margins: margin / 2
+                Button {
+                    id: vncButton
+                    Layout.fillWidth: true
+                    text: vncAction.text
+                    highlighted: true
+                    enabled: vncAction.enabled
+                    onClicked: vncAction.onTriggered()
+                }
+                CheckBox {
                     checked: autostart
                     onToggled: {
                         autostart = checked;
@@ -420,22 +413,19 @@ ApplicationWindow {
                         }
                     }
                 }
+                Label { text: "Auto"; }
             }
+
             GroupBox {
                 title: "Available IP addresses"
-                anchors.top: autoSwitchLayout.bottom
-                anchors.bottom: parent.bottom
-                anchors.left: parent.left
-                anchors.right: parent.right
+                Layout.fillWidth: true
+                implicitHeight: 150
                 ColumnLayout {
                     anchors.fill: parent
                     ListView {
                         id: ipListView
                         anchors.fill: parent
-                        // anchors.top: parent.top
-                        // anchors.left: parent.left
-                        // anchors.right: parent.right
-                        // height: 100
+                        clip: true
                         ScrollBar.vertical: ScrollBar {
                             parent: ipListView.parent
                             anchors.top: ipListView.top
@@ -453,6 +443,11 @@ ApplicationWindow {
                         }
                     }
                 }
+            }
+
+            RowLayout {
+                // Empty layout
+                Layout.fillHeight: true
             }
         }
     }
