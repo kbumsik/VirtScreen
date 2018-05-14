@@ -60,7 +60,7 @@ Item {
         source: "mainWindow.qml"
 
         onStatusChanged: {
-            console.log("Status changed", status);
+            console.log("Loader Status Changed.", status);
             if (status == Loader.Null) {
                 gc();
                 // This cause memory leak at this moment.
@@ -71,8 +71,7 @@ Item {
         onLoaded: {
             window.onVisibleChanged.connect(function(visible) {
                 if (!visible) {
-                    console.log('hiding');
-                    console.log("unloading...");
+                    console.log("Unloading ApplicationWindow...");
                     mainLoader.active = false;
                 }
             });
@@ -119,7 +118,6 @@ Item {
         }
 
         onActivated: function(reason) {
-            console.log(reason);
             if (reason == SystemTrayIcon.Context) {
                 return;
             }

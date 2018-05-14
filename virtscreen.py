@@ -51,8 +51,12 @@ class SubprocessWrapper:
         with open(os.devnull, "w") as f:
             subprocess.check_call(arg.split(), stdout=f, stderr=f)
     
-    def run(self, arg: str) -> str:
-        return subprocess.run(arg.split(), stdout=subprocess.PIPE).stdout.decode('utf-8')
+    def run(self, arg: str, input: str = None) -> str:
+        if input:
+            input = input.encode('utf-8')
+        with open(os.devnull, "w") as f:
+            return subprocess.run(arg.split(), input=input, stdout=subprocess.PIPE,
+                        stderr=f).stdout.decode('utf-8')
         
 #-------------------------------------------------------------------------------
 # Twisted class
@@ -156,7 +160,6 @@ class Display(object):
         else:
             ret += f" not active {self.width}x{self.height}"
         return ret
-
 
 class DisplayProperty(QObject):
     _display: Display
@@ -538,11 +541,12 @@ class Backend(QObject):
     @pyqtSlot(str)
     def createVNCPassword(self, password):
         if password:
+            password += '\n' + password + '\n\n' # verify + confirm
             p = SubprocessWrapper()
             try:
-                p.run(f"x11vnc -storepasswd {password} {X11VNC_PASSWORD_PATH}")
-            except:
-                print("Failed creating password")
+                p.run(f"x11vnc -storepasswd {X11VNC_PASSWORD_PATH}", input=password)
+            except Exception as e:
+                print("Failed creating password", e)
                 return
             self.vncUsePassword = True
         else:
@@ -566,16 +570,20 @@ class Backend(QObject):
             print("VNC Server is already running.")
             return
         # regex used in callbacks
-        re_connection = re.compile(r"^.*Got connection from client.*$", re.M)
+        patter_connected = re.compile(r"^.*Got connection from client.*$", re.M)
+        patter_disconnected = re.compile(r"^.*client_count: 0*$", re.M)
         # define callbacks
         def _onConnected():
             print("VNC started.")
             self.vncState = self.VNCState.WAITING
         def _onReceived(data):
             data = data.decode("utf-8")
-            if (self._vncState is not self.VNCState.CONNECTED) and re_connection.search(data):
+            if (self._vncState is not self.VNCState.CONNECTED) and patter_connected.search(data):
                 print("VNC connected.")
                 self.vncState = self.VNCState.CONNECTED
+            if (self._vncState is self.VNCState.CONNECTED) and patter_disconnected.search(data):
+                print("VNC disconnected.")
+                self.vncState = self.VNCState.WAITING
         def _onEnded(exitCode):
             print("VNC Exited.")
             self.vncState = self.VNCState.OFF
