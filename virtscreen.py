@@ -294,8 +294,8 @@ class XRandR(SubprocessWrapper):
             self.virt.width = height
             self.virt.height = width
         if hidpi:
-            self.virt.width = 2 * self.virt.width
-            self.virt.height = 2 * self.virt.height
+            self.virt.width *= 2
+            self.virt.height *= 2
         self.mode_name = str(self.virt.width) + "x" + str(self.virt.height) + self.VIRT_SCREEN_SUFFIX
         # Then create using xrandr command
         args_addmode = f"xrandr --addmode {self.virt.name} {self.mode_name}"

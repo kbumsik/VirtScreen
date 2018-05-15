@@ -98,21 +98,12 @@ ApplicationWindow {
         }
     }
 
-    // footer: ToolBar {
-    //     font.weight: Font.Medium
-    //     font.pointSize: 11 //parent.font.pointSize + 1
-    //     anchors { horizontalCenter: parent.horizontalCenter }
-    //     width: 200
-    // }
-
-    ProgressBar {
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
+    footer: ProgressBar {
         z: 1
         indeterminate: backend.vncState == Backend.WAITING
         value: backend.vncState == Backend.CONNECTED ? 1 : 0
     }
+
 
     Popup {
         id: busyDialog
