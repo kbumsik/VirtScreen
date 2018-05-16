@@ -6,20 +6,20 @@ from enum import Enum
 from typing import List, Dict
 
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import  QObject, QUrl, Qt, pyqtProperty, pyqtSlot, pyqtSignal, Q_ENUMS
+from PyQt5.QtCore import QObject, QUrl, Qt, pyqtProperty, pyqtSlot, pyqtSignal, Q_ENUMS
 from PyQt5.QtGui import QIcon, QCursor
 from PyQt5.QtQml import qmlRegisterType, QQmlApplicationEngine, QQmlListProperty
 
 from twisted.internet import protocol, error
 from netifaces import interfaces, ifaddresses, AF_INET
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # file path definitions
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # Sanitize environment variables
 # https://wiki.sei.cmu.edu/confluence/display/c/ENV03-C.+Sanitize+the+environment+when+invoking+external+programs
 del os.environ['HOME']  # Delete $HOME env for security reason. This will make
-                # Path.home() to look up in the password directory (pwd module)
+# Path.home() to look up in the password directory (pwd module)
 os.environ['PATH'] = os.confstr("CS_PATH")  # Sanitize $PATH
 
 HOME_PATH = str(Path.home())
@@ -35,25 +35,27 @@ ICON_PATH = PROGRAM_PATH + "/icon/icon.png"
 ICON_TABLET_OFF_PATH = PROGRAM_PATH + "/icon/icon_tablet_off.png"
 ICON_TABLET_ON_PATH = PROGRAM_PATH + "/icon/icon_tablet_on.png"
 
-#-------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------
 # Subprocess wrapper
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 class SubprocessWrapper:
     def __init__(self):
         pass
-    
+
     def check_output(self, arg) -> None:
         return subprocess.check_output(arg.split(), stderr=subprocess.STDOUT).decode('utf-8')
-    
+
     def run(self, arg: str, input: str = None, check=False) -> str:
         if input:
             input = input.encode('utf-8')
         return subprocess.run(arg.split(), input=input, stdout=subprocess.PIPE,
                               check=check, stderr=subprocess.STDOUT).stdout.decode('utf-8')
-        
-#-------------------------------------------------------------------------------
+
+
+# -------------------------------------------------------------------------------
 # Twisted class
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 class ProcessProtocol(protocol.ProcessProtocol):
     def __init__(self, onConnected, onOutReceived, onErrRecevied, onProcessEnded, logfile=None):
         self.onConnected = onConnected
@@ -61,7 +63,7 @@ class ProcessProtocol(protocol.ProcessProtocol):
         self.onErrRecevied = onErrRecevied
         self.onProcessEnded = onProcessEnded
         self.logfile = logfile
-    
+
     def run(self, arg: str):
         """Spawn a process
         
@@ -80,7 +82,7 @@ class ProcessProtocol(protocol.ProcessProtocol):
     def connectionMade(self):
         print("connectionMade!")
         self.onConnected()
-        self.transport.closeStdin() # No more input
+        self.transport.closeStdin()  # No more input
 
     def outReceived(self, data):
         # print("outReceived! with %d bytes!" % len(data))
@@ -125,12 +127,14 @@ class ProcessProtocol(protocol.ProcessProtocol):
         print("quitting")
         self.onProcessEnded(exitCode)
 
-#-------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------
 # Display properties
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 class Display(object):
     __slots__ = ['name', 'primary', 'connected', 'active', 'width', 'height', 'x_offset', 'y_offset']
-    def __init__(self, parent=None):
+
+    def __init__(self):
         self.name: str = None
         self.primary: bool = False
         self.connected: bool = False
@@ -154,9 +158,8 @@ class Display(object):
             ret += f" not active {self.width}x{self.height}"
         return ret
 
-class DisplayProperty(QObject):
-    _display: Display
 
+class DisplayProperty(QObject):
     def __init__(self, display: Display, parent=None):
         super(DisplayProperty, self).__init__(parent)
         self._display = display
@@ -168,6 +171,7 @@ class DisplayProperty(QObject):
     @pyqtProperty(str, constant=True)
     def name(self):
         return self._display.name
+
     @name.setter
     def name(self, name):
         self._display.name = name
@@ -175,6 +179,7 @@ class DisplayProperty(QObject):
     @pyqtProperty(bool, constant=True)
     def primary(self):
         return self._display.primary
+
     @primary.setter
     def primary(self, primary):
         self._display.primary = primary
@@ -182,6 +187,7 @@ class DisplayProperty(QObject):
     @pyqtProperty(bool, constant=True)
     def connected(self):
         return self._display.connected
+
     @connected.setter
     def connected(self, connected):
         self._display.connected = connected
@@ -189,6 +195,7 @@ class DisplayProperty(QObject):
     @pyqtProperty(bool, constant=True)
     def active(self):
         return self._display.active
+
     @active.setter
     def active(self, active):
         self._display.active = active
@@ -196,6 +203,7 @@ class DisplayProperty(QObject):
     @pyqtProperty(int, constant=True)
     def width(self):
         return self._display.width
+
     @width.setter
     def width(self, width):
         self._display.width = width
@@ -203,6 +211,7 @@ class DisplayProperty(QObject):
     @pyqtProperty(int, constant=True)
     def height(self):
         return self._display.height
+
     @height.setter
     def height(self, height):
         self._display.height = height
@@ -210,6 +219,7 @@ class DisplayProperty(QObject):
     @pyqtProperty(int, constant=True)
     def x_offset(self):
         return self._display.x_offset
+
     @x_offset.setter
     def x_offset(self, x_offset):
         self._display.x_offset = x_offset
@@ -217,13 +227,15 @@ class DisplayProperty(QObject):
     @pyqtProperty(int, constant=True)
     def y_offset(self):
         return self._display.y_offset
+
     @y_offset.setter
     def y_offset(self, y_offset):
         self._display.y_offset = y_offset
 
-#-------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------
 # Screen adjustment class
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 class XRandR(SubprocessWrapper):
     DEFAULT_VIRT_SCREEN = "VIRTUAL1"
     VIRT_SCREEN_SUFFIX = "_virt"
@@ -238,7 +250,7 @@ class XRandR(SubprocessWrapper):
         self.primary_idx: int = None
         # Primary display
         self._update_screens()
-    
+
     def _update_screens(self) -> None:
         output = self.run("xrandr")
         self.primary = None
@@ -246,7 +258,7 @@ class XRandR(SubprocessWrapper):
         self.screens = []
         self.primary_idx = None
         pattern = re.compile(r"^(\S*)\s+(connected|disconnected)\s+((primary)\s+)?"
-                        r"((\d+)x(\d+)\+(\d+)\+(\d+)\s+)?.*$", re.M)
+                             r"((\d+)x(\d+)\+(\d+)\+(\d+)\s+)?.*$", re.M)
         for idx, match in enumerate(pattern.finditer(output)):
             screen = Display()
             screen.name = match.group(1)
@@ -268,7 +280,7 @@ class XRandR(SubprocessWrapper):
         for s in self.screens:
             print("\t", s)
         if self.virt_idx == self.primary_idx:
-            raise RuntimeError("VIrtual screen must be selected other than the primary screen")
+            raise RuntimeError("Virtual screen must be selected other than the primary screen")
         if self.virt_idx is None:
             for idx, screen in enumerate(self.screens):
                 if not screen.connected and not screen.active:
@@ -318,7 +330,7 @@ class XRandR(SubprocessWrapper):
     def get_virtual_screen(self) -> Display:
         self._update_screens()
         return self.virt
-    
+
     def create_virtual_screen(self, width, height, portrait=False, hidpi=False) -> None:
         print("creating: ", self.virt)
         self._add_screen_mode(width, height, portrait, hidpi)
@@ -338,11 +350,13 @@ class XRandR(SubprocessWrapper):
         atexit.unregister(self.delete_virtual_screen)
         self._update_screens()
 
-#-------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------
 # QML Backend class
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 class Backend(QObject):
     """ Backend class for QML frontend """
+
     class VNCState:
         """ Enum to indicate a state of the VNC server """
         OFF = 0
@@ -373,7 +387,7 @@ class Backend(QObject):
         # Primary screen and mouse posistion
         self._primaryProp: DisplayProperty
         self.vncServer: ProcessProtocol
-        
+
     # Qt properties
     @pyqtProperty(str, constant=True)
     def settings(self):
@@ -383,14 +397,16 @@ class Backend(QObject):
         except FileNotFoundError:
             with open(DEFAULT_CONFIG_PATH, "r") as f:
                 return f.read()
+
     @settings.setter
     def settings(self, json_str):
         with open(CONFIG_PATH, "w") as f:
             f.write(json_str)
-    
+
     @pyqtProperty(bool, notify=onVirtScreenCreatedChanged)
     def virtScreenCreated(self):
         return self._virtScreenCreated
+
     @virtScreenCreated.setter
     def virtScreenCreated(self, value):
         self._virtScreenCreated = value
@@ -403,6 +419,7 @@ class Backend(QObject):
     @pyqtProperty(int, notify=onVirtScreenIndexChanged)
     def virtScreenIndex(self):
         return self._virtScreenIndex
+
     @virtScreenIndex.setter
     def virtScreenIndex(self, virtScreenIndex):
         print("Changing virt to ", virtScreenIndex)
@@ -418,6 +435,7 @@ class Backend(QObject):
             if self._vncUsePassword:
                 self.vncUsePassword = False
         return self._vncUsePassword
+
     @vncUsePassword.setter
     def vncUsePassword(self, use):
         self._vncUsePassword = use
@@ -426,6 +444,7 @@ class Backend(QObject):
     @pyqtProperty(VNCState, notify=onVncStateChanged)
     def vncState(self):
         return self._vncState
+
     @vncState.setter
     def vncState(self, state):
         self._vncState = state
@@ -442,7 +461,7 @@ class Backend(QObject):
             for link in addresses:
                 if link is not None:
                     yield link['addr']
-    
+
     @pyqtProperty(DisplayProperty)
     def primary(self):
         self._primaryProp = DisplayProperty(self.xrandr.get_primary_screen())
@@ -457,7 +476,7 @@ class Backend(QObject):
     def cursor_y(self):
         cursor = QCursor().pos()
         return cursor.y()
-    
+
     # Qt Slots
     @pyqtSlot(int, int, bool, bool)
     def createVirtScreen(self, width, height, portrait, hidpi):
@@ -468,7 +487,7 @@ class Backend(QObject):
             self.onError.emit(str(e.cmd) + '\n' + e.stdout.decode('utf-8'))
             return
         self.virtScreenCreated = True
-        
+
     @pyqtSlot()
     def deleteVirtScreen(self):
         print("Deleting the Virtual Screen...")
@@ -478,11 +497,11 @@ class Backend(QObject):
             return
         self.xrandr.delete_virtual_screen()
         self.virtScreenCreated = False
-    
+
     @pyqtSlot(str)
     def createVNCPassword(self, password):
         if password:
-            password += '\n' + password + '\n\n' # verify + confirm
+            password += '\n' + password + '\n\n'  # verify + confirm
             p = SubprocessWrapper()
             try:
                 p.run(f"x11vnc -storepasswd {X11VNC_PASSWORD_PATH}", input=password, check=True)
@@ -513,10 +532,12 @@ class Backend(QObject):
         # regex used in callbacks
         patter_connected = re.compile(r"^.*Got connection from client.*$", re.M)
         patter_disconnected = re.compile(r"^.*client_count: 0*$", re.M)
+
         # define callbacks
         def _onConnected():
             print("VNC started.")
             self.vncState = self.VNCState.WAITING
+
         def _onReceived(data):
             data = data.decode("utf-8")
             if (self._vncState is not self.VNCState.CONNECTED) and patter_connected.search(data):
@@ -525,15 +546,17 @@ class Backend(QObject):
             if (self._vncState is self.VNCState.CONNECTED) and patter_disconnected.search(data):
                 print("VNC disconnected.")
                 self.vncState = self.VNCState.WAITING
+
         def _onEnded(exitCode):
             if exitCode is not 0:
                 self.vncState = self.VNCState.ERROR
                 self.onError.emit('X11VNC: Error occurred.\nDouble check if the port is already used.')
-                self.vncState = self.VNCState.OFF   # TODO: better handling error state
+                self.vncState = self.VNCState.OFF  # TODO: better handling error state
             else:
                 self.vncState = self.VNCState.OFF
             print("VNC Exited.")
             atexit.unregister(self.stopVNC)
+
         logfile = open(X11VNC_LOG_PATH, "wb")
         self.vncServer = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, logfile)
         virt = self.xrandr.get_virtual_screen()
@@ -550,13 +573,16 @@ class Backend(QObject):
         # define callbacks
         def _onConnected():
             print("External Display Setting opened.")
+
         def _onReceived(data):
             pass
+
         def _onEnded(exitCode):
             print("External Display Setting closed.")
             self.onDisplaySettingClosed.emit()
             if exitCode is not 0:
                 self.onError.emit(f'Error opening "{running_program}".')
+
         program_list = ["gnome-control-center display", "arandr"]
         program = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, None)
         running_program = ''
@@ -567,18 +593,18 @@ class Backend(QObject):
             program.run(arg)
             return
         self.onError.emit('Failed to find a display settings program.\n'
-                        'Please install ARandR package.\n'
-                        '(e.g. sudo apt-get install arandr)\n'
-                        'Please issue a feature request\n'
-                        'if you wish to add a display settings\n'
-                        'program for your Desktop Environment.')
+                          'Please install ARandR package.\n'
+                          '(e.g. sudo apt-get install arandr)\n'
+                          'Please issue a feature request\n'
+                          'if you wish to add a display settings\n'
+                          'program for your Desktop Environment.')
 
     @pyqtSlot()
     def stopVNC(self, force=False):
         if force:
             # Usually called from atexit().
             self.vncServer.kill()
-            time.sleep(2)   # Make sure X11VNC shutdown before execute next atexit.
+            time.sleep(2)  # Make sure X11VNC shutdown before execute next atexit().
         if self._vncState in (self.VNCState.WAITING, self.VNCState.CONNECTED):
             self.vncServer.kill()
         else:
@@ -590,12 +616,13 @@ class Backend(QObject):
 
     @pyqtSlot()
     def quitProgram(self):
-        self.blockSignals(True) # This will prevent invoking auto-restart or etc.
+        self.blockSignals(True)  # This will prevent invoking auto-restart or etc.
         QApplication.instance().quit()
 
-#-------------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------------
 # Main Code
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 if __name__ == '__main__':
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
@@ -604,33 +631,34 @@ if __name__ == '__main__':
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
         QMessageBox.critical(None, "VirtScreen",
-                "Cannot detect system tray on this system.")
+                             "Cannot detect system tray on this system.")
         sys.exit(1)
 
     if os.environ['XDG_SESSION_TYPE'] == 'wayland':
         QMessageBox.critical(None, "VirtScreen",
-                            "Currently Wayland is not supported")
+                             "Currently Wayland is not supported")
         sys.exit(1)
     if not HOME_PATH:
         QMessageBox.critical(None, "VirtScreen",
-                            "Cannot detect home directory.")
+                             "Cannot detect home directory.")
         sys.exit(1)
     if not os.path.exists(HOME_PATH):
         try:
             os.makedirs(HOME_PATH)
         except:
             QMessageBox.critical(None, "VirtScreen",
-                                "Cannot create ~/.virtscreen")
+                                 "Cannot create ~/.virtscreen")
             sys.exit(1)
-    
-    import qt5reactor # pylint: disable=E0401
+
+    import qt5reactor  # pylint: disable=E0401
+
     qt5reactor.install()
-    from twisted.internet import utils, reactor # pylint: disable=E0401
+    from twisted.internet import utils, reactor  # pylint: disable=E0401
 
     app.setWindowIcon(QIcon(ICON_PATH))
     os.environ["QT_QUICK_CONTROLS_STYLE"] = "Material"
     # os.environ["QT_QUICK_CONTROLS_STYLE"] = "Fusion"
-    
+
     # Register the Python type.  Its URI is 'People', it's v1.0 and the type
     # will be called 'Person' in QML.
     qmlRegisterType(DisplayProperty, 'VirtScreen.DisplayProperty', 1, 0, 'DisplayProperty')
