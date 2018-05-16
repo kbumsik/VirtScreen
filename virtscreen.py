@@ -48,7 +48,7 @@ class SubprocessWrapper:
     def run(self, arg: str, input: str = None) -> str:
         if input:
             input = input.encode('utf-8')
-            return subprocess.run(arg.split(), input=input, stdout=subprocess.PIPE,
+        return subprocess.run(arg.split(), input=input, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT).stdout.decode('utf-8')
         
 #-------------------------------------------------------------------------------
@@ -463,7 +463,7 @@ class Backend(QObject):
     def createVirtScreen(self, width, height, portrait, hidpi):
         print("Creating a Virtual Screen...")
         try:
-        self.xrandr.create_virtual_screen(width, height, portrait, hidpi)
+            self.xrandr.create_virtual_screen(width, height, portrait, hidpi)
         except subprocess.CalledProcessError as e:
             self.onError.emit(str(e.cmd) + '\n' + e.stdout.decode('utf-8'))
             return
@@ -528,9 +528,11 @@ class Backend(QObject):
         def _onEnded(exitCode):
             if exitCode is not 0:
                 self.vncState = self.VNCState.ERROR
-                self.onError.emit('X11VNC: Error occurred.')
+                self.onError.emit('X11VNC: Error occurred.\nDouble check if the port is already used.')
+                self.vncState = self.VNCState.OFF   # TODO: better handling error state
+            else:
+                self.vncState = self.VNCState.OFF
             print("VNC Exited.")
-            self.vncState = self.VNCState.OFF
             atexit.unregister(self.stopVNC)
         logfile = open(X11VNC_LOG_PATH, "wb")
         self.vncServer = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, logfile)
