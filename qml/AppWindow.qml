@@ -230,18 +230,37 @@ ApplicationWindow {
         x: (parent.width - width) / 2
         y: (parent.width - height) / 2 //(window.height) / 2 
         width: popupWidth
+        height: 310
         ColumnLayout {
             anchors.fill: parent
-            Text {
-                horizontalAlignment: Text.AlignHCenter
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                text: errorText.text
-                onTextChanged: {
-                    if (text) {
-                        busyDialog.close();
-                        errorDialog.open();
+            ScrollView {
+                anchors.fill: parent
+                TextArea {
+                    // readOnly: true
+                    selectByMouse: true
+                    Layout.fillWidth: true
+                    // wrapMode: Text.WordWrap
+                    text: errorText.text
+                    onTextChanged: {
+                        if (text) {
+                            busyDialog.close();
+                            errorDialog.open();
+                        }
                     }
+                }
+                ScrollBar.vertical: ScrollBar {
+                    // parent: ipListView.parent
+                    anchors.top: parent.top
+                    anchors.left: parent.right
+                    anchors.bottom: parent.bottom
+                    policy: ScrollBar.AlwaysOn
+                }
+                ScrollBar.horizontal: ScrollBar {
+                    // parent: ipListView.parent
+                    anchors.top: parent.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    policy: ScrollBar.AlwaysOn
                 }
             }
         }

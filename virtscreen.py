@@ -39,24 +39,17 @@ ICON_TABLET_ON_PATH = PROGRAM_PATH + "/icon/icon_tablet_on.png"
 # Subprocess wrapper
 #-------------------------------------------------------------------------------
 class SubprocessWrapper:
-    def __init__(self, stdout:str=os.devnull, stderr:str=os.devnull):
-        self.stdout: str = stdout
-        self.stderr: str = stderr
+    def __init__(self):
+        pass
     
-    def call(self, arg) -> None:
-        with open(os.devnull, "w") as f:
-            subprocess.call(arg.split(), stdout=f, stderr=f)
-
     def check_call(self, arg) -> None:
-        with open(os.devnull, "w") as f:
-            subprocess.check_call(arg.split(), stdout=f, stderr=f)
+        return subprocess.check_output(arg.split(), stderr=subprocess.STDOUT).decode('utf-8')
     
     def run(self, arg: str, input: str = None) -> str:
         if input:
             input = input.encode('utf-8')
-        with open(os.devnull, "w") as f:
             return subprocess.run(arg.split(), input=input, stdout=subprocess.PIPE,
-                        stderr=f).stdout.decode('utf-8')
+                                stderr=subprocess.STDOUT).stdout.decode('utf-8')
         
 #-------------------------------------------------------------------------------
 # Twisted class
@@ -340,8 +333,8 @@ class XRandR(SubprocessWrapper):
             self.mode_name
         except AttributeError:
             return
-        self.call(f"xrandr --output {self.virt.name} --off")
-        self.call(f"xrandr --delmode {self.virt.name} {self.mode_name}")
+        self.run(f"xrandr --output {self.virt.name} --off")
+        self.run(f"xrandr --delmode {self.virt.name} {self.mode_name}")
         atexit.unregister(self.delete_virtual_screen)
         self._update_screens()
 
@@ -469,7 +462,11 @@ class Backend(QObject):
     @pyqtSlot(int, int, bool, bool)
     def createVirtScreen(self, width, height, portrait, hidpi):
         print("Creating a Virtual Screen...")
+        try:
         self.xrandr.create_virtual_screen(width, height, portrait, hidpi)
+        except subprocess.CalledProcessError as e:
+            self.onError.emit(str(e.cmd) + '\n' + e.stdout.decode('utf-8'))
+            return
         self.virtScreenCreated = True
         
     @pyqtSlot()
@@ -556,14 +553,23 @@ class Backend(QObject):
         def _onEnded(exitCode):
             print("External Display Setting closed.")
             self.onDisplaySettingClosed.emit()
+            if exitCode is not 0:
+                self.onError.emit(f'Error opening "{running_program}".')
         program_list = ["gnome-control-center display", "arandr"]
         program = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, None)
+        running_program = ''
         for arg in program_list:
             if not shutil.which(arg.split()[0]):
                 continue
+            running_program = arg
             program.run(arg)
             return
-        self.onError.emit('Failed to find a display settings program. Please install ARandR package.')
+        self.onError.emit('Failed to find a display settings program.\n'
+                        'Please install ARandR package.\n'
+                        '(e.g. sudo apt-get install arandr)\n'
+                        'Please issue a feature request\n'
+                        'if you wish to add a display settings\n'
+                        'program for your Desktop Environment.')
 
     @pyqtSlot()
     def stopVNC(self, force=False):
