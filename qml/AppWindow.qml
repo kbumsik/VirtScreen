@@ -12,9 +12,10 @@ ApplicationWindow {
     flags: Qt.FramelessWindowHint
     title: "Basic layouts"
 
+    property int theme_color: settings.theme_color
     Material.theme: Material.Light
-    Material.primary: Material.Teal
-    Material.accent: Material.Teal
+    Material.primary: theme_color
+    Material.accent: theme_color
     // Material.background: Material.Grey
 
     width: 380
@@ -53,6 +54,7 @@ ApplicationWindow {
             
             Label {
                 id: vncStateLabel
+                color: "white"
                 text: vncStateText.text
             }
 
@@ -60,11 +62,27 @@ ApplicationWindow {
                 id: menuButton
                 anchors.right: parent.right
                 text: qsTr("⋮")
+                contentItem: Text {
+                    text: parent.text
+                    font: parent.font
+                    color: "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                }
+
                 onClicked: menu.open()
 
                 Menu {
                     id: menu
                     y: toolbar.height
+
+                    MenuItem {
+                        text: qsTr("&Preference")
+                        onTriggered: {
+                            preferenceLoader.active = true;
+                        }
+                    }
 
                     MenuItem {
                         text: qsTr("&About")
@@ -201,6 +219,17 @@ ApplicationWindow {
             passwordFIeld.text = "";
         }
         onRejected: passwordFIeld.text = ""
+    }
+
+    Loader {
+        id: preferenceLoader
+        active: false
+        source: "preferenceDialog.qml"
+        onLoaded: {
+            item.onClosed.connect(function() {
+                preferenceLoader.active = false;
+            });
+        }
     }
     
     SwipeView {
