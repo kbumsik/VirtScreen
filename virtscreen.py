@@ -42,14 +42,14 @@ class SubprocessWrapper:
     def __init__(self):
         pass
     
-    def check_call(self, arg) -> None:
+    def check_output(self, arg) -> None:
         return subprocess.check_output(arg.split(), stderr=subprocess.STDOUT).decode('utf-8')
     
-    def run(self, arg: str, input: str = None) -> str:
+    def run(self, arg: str, input: str = None, check=False) -> str:
         if input:
             input = input.encode('utf-8')
         return subprocess.run(arg.split(), input=input, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT).stdout.decode('utf-8')
+                              check=check, stderr=subprocess.STDOUT).stdout.decode('utf-8')
         
 #-------------------------------------------------------------------------------
 # Twisted class
@@ -293,15 +293,15 @@ class XRandR(SubprocessWrapper):
         # Then create using xrandr command
         args_addmode = f"xrandr --addmode {self.virt.name} {self.mode_name}"
         try:
-            self.check_call(args_addmode)
+            self.check_output(args_addmode)
         except subprocess.CalledProcessError:
             # When failed create mode and then add again
             output = self.run(f"cvt {self.virt.width} {self.virt.height}")
             mode = re.search(r"^.*Modeline\s*\".*\"\s*(.*)$", output, re.M).group(1)
             # Create new screen mode
-            self.check_call(f"xrandr --newmode {self.mode_name} {mode}")
+            self.check_output(f"xrandr --newmode {self.mode_name} {mode}")
             # Add mode again
-            self.check_call(args_addmode)
+            self.check_output(args_addmode)
         # After adding mode the program should delete the mode automatically on exit
         atexit.register(self.delete_virtual_screen)
         for sig in [signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT]:
@@ -322,9 +322,9 @@ class XRandR(SubprocessWrapper):
     def create_virtual_screen(self, width, height, portrait=False, hidpi=False) -> None:
         print("creating: ", self.virt)
         self._add_screen_mode(width, height, portrait, hidpi)
-        self.check_call(f"xrandr --output {self.virt.name} --mode {self.mode_name}")
-        self.check_call("sleep 5")
-        self.check_call(f"xrandr --output {self.virt.name} --preferred")
+        self.check_output(f"xrandr --output {self.virt.name} --mode {self.mode_name}")
+        self.check_output("sleep 5")
+        self.check_output(f"xrandr --output {self.virt.name} --preferred")
         self._update_screens()
 
     def delete_virtual_screen(self) -> None:
@@ -351,16 +351,6 @@ class Backend(QObject):
         CONNECTED = 3
 
     Q_ENUMS(VNCState)
-    # Virtual screen properties
-    xrandr: XRandR = XRandR()
-    _virtScreenCreated: bool = False
-    _virtScreenIndex: int = xrandr.virt_idx
-    # VNC server properties
-    _vncUsePassword: bool = False
-    _vncState: VNCState = VNCState.OFF
-    # Primary screen and mouse posistion
-    _primaryProp: DisplayProperty
-    vncServer: ProcessProtocol
 
     # Signals
     onVirtScreenCreatedChanged = pyqtSignal(bool)
@@ -373,6 +363,16 @@ class Backend(QObject):
 
     def __init__(self, parent=None):
         super(Backend, self).__init__(parent)
+        # Virtual screen properties
+        self.xrandr: XRandR = XRandR()
+        self._virtScreenCreated: bool = False
+        self._virtScreenIndex: int = self.xrandr.virt_idx
+        # VNC server properties
+        self._vncUsePassword: bool = False
+        self._vncState: self.VNCState = self.VNCState.OFF
+        # Primary screen and mouse posistion
+        self._primaryProp: DisplayProperty
+        self.vncServer: ProcessProtocol
         
     # Qt properties
     @pyqtProperty(str, constant=True)
@@ -473,7 +473,7 @@ class Backend(QObject):
     def deleteVirtScreen(self):
         print("Deleting the Virtual Screen...")
         if self.vncState is not self.VNCState.OFF:
-            print("Turn off the VNC server first")
+            self.onError.emit("Turn off the VNC server first")
             self.virtScreenCreated = True
             return
         self.xrandr.delete_virtual_screen()
@@ -485,13 +485,13 @@ class Backend(QObject):
             password += '\n' + password + '\n\n' # verify + confirm
             p = SubprocessWrapper()
             try:
-                p.run(f"x11vnc -storepasswd {X11VNC_PASSWORD_PATH}", input=password)
-            except Exception as e:
-                print("Failed creating password", e)
+                p.run(f"x11vnc -storepasswd {X11VNC_PASSWORD_PATH}", input=password, check=True)
+            except subprocess.CalledProcessError as e:
+                self.onError.emit(str(e.cmd) + '\n' + e.stdout.decode('utf-8'))
                 return
             self.vncUsePassword = True
         else:
-            print("Empty password")
+            self.onError.emit("Empty password")
 
     @pyqtSlot()
     def deleteVNCPassword(self):
@@ -499,16 +499,16 @@ class Backend(QObject):
             os.remove(X11VNC_PASSWORD_PATH)
             self.vncUsePassword = False
         else:
-            print("Failed deleting the password file")
+            self.onError.emit("Failed deleting the password file")
 
     @pyqtSlot(int)
     def startVNC(self, port):
         # Check if a virtual screen created
         if not self.virtScreenCreated:
-            print("Virtual Screen not crated.")
+            self.onError.emit("Virtual Screen not crated.")
             return
         if self.vncState is not self.VNCState.OFF:
-            print("VNC Server is already running.")
+            self.onError.emit("VNC Server is already running.")
             return
         # regex used in callbacks
         patter_connected = re.compile(r"^.*Got connection from client.*$", re.M)
@@ -582,7 +582,7 @@ class Backend(QObject):
         if self._vncState in (self.VNCState.WAITING, self.VNCState.CONNECTED):
             self.vncServer.kill()
         else:
-            print("stopVNC called while it is not running")
+            self.onError.emit("stopVNC called while it is not running")
 
     @pyqtSlot()
     def clearCache(self):
