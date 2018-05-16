@@ -146,7 +146,7 @@ Item {
                 text: ""
                 Component.onCompleted : {
                     backend.onError.connect(function(errMsg) {
-                        errorText.text = "";
+                        errorText.text = "";    // To trigger onTextChanged signal
                         errorText.text = errMsg;
                     });
                 }

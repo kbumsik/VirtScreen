@@ -562,7 +562,8 @@ class Backend(QObject):
             if not shutil.which(arg.split()[0]):
                 continue
             program.run(arg)
-            break            
+            return
+        self.onError.emit('Failed to find a display settings program. Please install ARandR package.')
 
     @pyqtSlot()
     def stopVNC(self, force=False):

@@ -234,9 +234,12 @@ ApplicationWindow {
             anchors.fill: parent
             Text {
                 horizontalAlignment: Text.AlignHCenter
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
                 text: errorText.text
                 onTextChanged: {
                     if (text) {
+                        busyDialog.close();
                         errorDialog.open();
                     }
                 }
