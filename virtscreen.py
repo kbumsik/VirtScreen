@@ -353,22 +353,20 @@ class Backend(QObject):
     class VNCState:
         """ Enum to indicate a state of the VNC server """
         OFF = 0
-        WAITING = 1
-        CONNECTED = 2
+        ERROR = 1
+        WAITING = 2
+        CONNECTED = 3
 
     Q_ENUMS(VNCState)
     # Virtual screen properties
-    xrandr: XRandR
+    xrandr: XRandR = XRandR()
     _virtScreenCreated: bool = False
-    screens: List[DisplayProperty]
-    _virtScreenIndex: int
+    _virtScreenIndex: int = xrandr.virt_idx
     # VNC server properties
     _vncUsePassword: bool = False
     _vncState: VNCState = VNCState.OFF
     # Primary screen and mouse posistion
     _primaryProp: DisplayProperty
-    cursor_x: int
-    cursor_y: int
     vncServer: ProcessProtocol
 
     # Signals
@@ -376,15 +374,12 @@ class Backend(QObject):
     onVirtScreenIndexChanged = pyqtSignal(int)
     onVncUsePasswordChanged = pyqtSignal(bool)
     onVncStateChanged = pyqtSignal(VNCState)
-    onVncAutoStartChanged = pyqtSignal(bool)
     onIPAddressesChanged = pyqtSignal()
     onDisplaySettingClosed = pyqtSignal()
+    onError = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(Backend, self).__init__(parent)
-        # create objects
-        self.xrandr = XRandR()
-        self._virtScreenIndex = self.xrandr.virt_idx
         
     # Qt properties
     @pyqtProperty(str, constant=True)
@@ -534,6 +529,9 @@ class Backend(QObject):
                 print("VNC disconnected.")
                 self.vncState = self.VNCState.WAITING
         def _onEnded(exitCode):
+            if exitCode is not 0:
+                self.vncState = self.VNCState.ERROR
+                self.onError.emit('X11VNC: Error occurred.')
             print("VNC Exited.")
             self.vncState = self.VNCState.OFF
             atexit.unregister(self.stopVNC)

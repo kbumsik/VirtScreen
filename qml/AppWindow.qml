@@ -221,6 +221,29 @@ ApplicationWindow {
         onRejected: passwordFIeld.text = ""
     }
 
+    Dialog {
+        id: errorDialog
+        title: "Error"
+        focus: true
+        modal: true
+        standardButtons: Dialog.Ok
+        x: (parent.width - width) / 2
+        y: (parent.width - height) / 2 //(window.height) / 2 
+        width: popupWidth
+        ColumnLayout {
+            anchors.fill: parent
+            Text {
+                horizontalAlignment: Text.AlignHCenter
+                text: errorText.text
+                onTextChanged: {
+                    if (text) {
+                        errorDialog.open();
+                    }
+                }
+            }
+        }
+    }
+
     Loader {
         id: preferenceLoader
         active: false

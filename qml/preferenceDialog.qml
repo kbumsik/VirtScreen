@@ -9,7 +9,7 @@ Dialog {
     focus: true
     modal: true
     visible: true
-    standardButtons: Dialog.Ok | Dialog.Cancel
+    standardButtons: Dialog.Ok
     x: (window.width - width) / 2
     y: (window.width - height) / 2 
     width: popupWidth

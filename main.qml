@@ -29,6 +29,11 @@ Item {
     // virtscreen.py backend.
     Backend {
         id: backend
+        onVncStateChanged: {
+            if (backend.vncState == Backend.ERROR) {
+                autostart = false;
+            }
+        }
     }
 
     // Timer object and function
@@ -128,11 +133,23 @@ Item {
         menu: Menu {
             MenuItem {
                 id: vncStateText
-                text: !backend.virtScreenCreated ? "Enable Virtual Screen first." :
-                      backend.vncState == Backend.OFF ? "Turn on VNC Server in the VNC tab." :
+                text: !backend.virtScreenCreated ? "Enable Virtual Screen first" :
+                      backend.vncState == Backend.OFF ? "Turn on VNC Server in the VNC tab" :
+                      backend.vncState == Backend.ERROR ? "Error occurred" :
                       backend.vncState == Backend.WAITING ? "VNC Server is waiting for a client..." :
-                      backend.vncState == Backend.CONNECTED ? "Connected." :
+                      backend.vncState == Backend.CONNECTED ? "Connected" :
                       "Server state error!"
+            }
+            MenuItem {
+                id: errorText
+                visible: (text)
+                text: ""
+                Component.onCompleted : {
+                    backend.onError.connect(function(errMsg) {
+                        errorText.text = "";
+                        errorText.text = errMsg;
+                    });
+                }
             }
             MenuItem {
                 separator: true
