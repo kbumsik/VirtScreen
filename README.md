@@ -1,4 +1,5 @@
 # VirtScreen
+
 > Make your iPad/tablet/computer as a secondary monitor on Linux.
 
 ![gif example](https://github.com/kbumsik/VirtScreen/blob/d2387d3321bd4d110d890ca87703196df203dc89/icon/gif_example.gif?raw=true)
@@ -18,7 +19,13 @@ $ sudo apt-get install x11vnc
 
 ### Installing package
 
-#### From the Git repository
+#### Using `pip`
+
+```bash
+$ pip install virtscreen
+```
+
+#### From the Git repository directly
 
 ```bash
 $ python setup.py install # add --user option if you have permission problem
