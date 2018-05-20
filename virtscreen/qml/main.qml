@@ -62,7 +62,7 @@ Item {
     Loader {
         id: mainLoader
         active: false
-        source: "qml/AppWindow.qml"
+        source: "AppWindow.qml"
 
         onStatusChanged: {
             console.log("Loader Status Changed.", status);
@@ -106,9 +106,9 @@ Item {
     // Sytray Icon
     SystemTrayIcon {
         id: sysTrayIcon
-        iconSource: backend.vncState == Backend.CONNECTED ? "icon/icon_tablet_on.png" :
-                    backend.virtScreenCreated ? "icon/icon_tablet_off.png" :
-                    "icon/icon.png"
+        iconSource: backend.vncState == Backend.CONNECTED ? "../icon/icon_tablet_on.png" :
+                    backend.virtScreenCreated ? "../icon/icon_tablet_off.png" :
+                    "../icon/icon.png"
         visible: true
         property bool clicked: false
         onMessageClicked: console.log("Message clicked")

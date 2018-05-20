@@ -7,29 +7,36 @@ VirtScreen is an easy-to-use Linux GUI app that creates a virtual secondary scre
 
 VirtScreen is based on [PyQt5](https://www.riverbankcomputing.com/software/pyqt/intro) and [Twisted](https://twistedmatrix.com) in Python side and uses [x11vnc](https://github.com/LibVNC/x11vnc) and XRandR.
 
-## Dependency
+## Installation & running
 
-1. You need [`x11vnc`](https://github.com/LibVNC/x11vnc) and `xrandr`. To install (example on Ubuntu):
+### Installing dependancies
+
+You need [`x11vnc`](https://github.com/LibVNC/x11vnc) and `xrandr`. To install (example on Ubuntu):
 ```bash
-sudo apt-get install x11vnc xrandr
+$ sudo apt-get install x11vnc
 ```
 
-2. Install Python dependencies:
+### Installing package
 
-```
-pip install -r requirements.txt
-```
-
-## How to run
-
-Simply run this in the project root:
+#### From the Git repository
 
 ```bash
-./virtscreen.py
+$ python setup.py install # add --user option if you have permission problem
+```
 
-or
 
-python virtscreen.py
+### How to run
+
+Simply run `virtscreen` after installation:
+
+```bash
+$ virtscreen
+```
+
+If you want to run it directly from the Git repository:
+
+```bash
+$ ./launch.sh
 ```
 
 Note that any files related to VirtScreen, including password and log, will be stored in `~/.virtscreen` directory.

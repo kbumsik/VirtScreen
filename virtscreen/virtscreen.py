@@ -22,19 +22,20 @@ del os.environ['HOME']  # Delete $HOME env for security reason. This will make
 # Path.home() to look up in the password directory (pwd module)
 os.environ['PATH'] = os.confstr("CS_PATH")  # Sanitize $PATH
 
+# Setting home path and base path
 HOME_PATH = str(Path.home())
 if HOME_PATH is not None:
     HOME_PATH = HOME_PATH + "/.virtscreen"
+BASE_PATH = os.path.dirname(__file__)
+# Path in ~/.virtscreen
 X11VNC_LOG_PATH = HOME_PATH + "/x11vnc_log.txt"
 X11VNC_PASSWORD_PATH = HOME_PATH + "/x11vnc_passwd"
 CONFIG_PATH = HOME_PATH + "/config.json"
-DEFAULT_CONFIG_PATH = "./config.default.json"
-
-PROGRAM_PATH = "."
-ICON_PATH = PROGRAM_PATH + "/icon/icon.png"
-ICON_TABLET_OFF_PATH = PROGRAM_PATH + "/icon/icon_tablet_off.png"
-ICON_TABLET_ON_PATH = PROGRAM_PATH + "/icon/icon_tablet_on.png"
-
+# Path in the program path
+DEFAULT_CONFIG_PATH = BASE_PATH + "/data/config.default.json"
+ICON_PATH = BASE_PATH + "/icon/icon.png"
+QML_PATH = BASE_PATH + "/qml"
+MAIN_QML_PATH = QML_PATH + "/main.qml"
 
 # -------------------------------------------------------------------------------
 # Subprocess wrapper
@@ -623,7 +624,7 @@ class Backend(QObject):
 # -------------------------------------------------------------------------------
 # Main Code
 # -------------------------------------------------------------------------------
-if __name__ == '__main__':
+def main():
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
 
@@ -666,9 +667,12 @@ if __name__ == '__main__':
 
     # Create a component factory and load the QML script.
     engine = QQmlApplicationEngine()
-    engine.load(QUrl('main.qml'))
+    engine.load(QUrl(MAIN_QML_PATH))
     if not engine.rootObjects():
         QMessageBox.critical(None, "VirtScreen", "Failed to load QML")
         sys.exit(1)
     sys.exit(app.exec_())
     reactor.run()
+
+if __name__ == '__main__':
+    main()
