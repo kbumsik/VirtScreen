@@ -8,42 +8,53 @@ VirtScreen is an easy-to-use Linux GUI app that creates a virtual secondary scre
 
 VirtScreen is based on [PyQt5](https://www.riverbankcomputing.com/software/pyqt/intro) and [Twisted](https://twistedmatrix.com) in Python side and uses [x11vnc](https://github.com/LibVNC/x11vnc) and XRandR.
 
-## Installation & running
+## How to use
 
-### Installing dependancies
+Upon installation (see Installing section to install), there will be a desktop entry called `virtscreen`
+
+![desktop entry](doc/desktop_entry.png)
+
+Or you can run it using a command line:
+
+```bash
+$ virtscreen
+```
+
+Note that any files related to VirtScreen, including password and log, will be stored in `~/.virtscreen` directory.
+
+## Dependancies
 
 You need [`x11vnc`](https://github.com/LibVNC/x11vnc) and `xrandr`. To install (example on Ubuntu):
 ```bash
 $ sudo apt-get install x11vnc
 ```
 
-### Installing package
+## Installing
 
-#### Using `pip`
+### Debian (Ubuntu)
+
+A PPA package will be available soon.
+
+### Arch Linux (AUR)
+
+There is [`virtscreen` AUR package](https://aur.archlinux.org/packages/virtscreen/) available. Though there are many ways to install the AUR package, one of the easiest way is to use [`aurman`](https://github.com/polygamma/aurman) AUR helper:
+
+```bash
+$ aurman -S virtscreen
+```
+
+### Python `pip`
+
+If your distro is none of above, you may install it using `pip`:
 
 ```bash
 $ pip install virtscreen
 ```
 
-#### From the Git repository directly
+but a desktop entry won't be created.
+
+### From the Git repository directly
 
 ```bash
 $ python setup.py install # add --user option if you have permission problem
 ```
-
-
-### How to run
-
-Simply run `virtscreen` after installation:
-
-```bash
-$ virtscreen
-```
-
-If you want to run it directly from the Git repository:
-
-```bash
-$ ./launch.sh
-```
-
-Note that any files related to VirtScreen, including password and log, will be stored in `~/.virtscreen` directory.
