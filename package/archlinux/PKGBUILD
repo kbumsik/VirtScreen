@@ -27,12 +27,12 @@ sha256sums=('0207fa4c2d1ddebd35d42ce7489e8a357bf565b7e962073cdfd6521d56b92fc4')
 build() {
   echo "$pkgdir"
   cd $_pkgname_camelcase-$pkgver
-  python setup.py build
+  /usr/bin/python3 setup.py build
 }
 
 package() {
   cd $_pkgname_camelcase-$pkgver
-  python setup.py install --root="$pkgdir/" --optimize=1 --skip-build
+  /usr/bin/python3 setup.py install --root="$pkgdir/" --optimize=1 --skip-build
   install -Dm644 "$pkgname.desktop" "$pkgdir/usr/share/applications/$pkgname.desktop"
   install -Dm644 "$pkgname/icon/icon.png" "$pkgdir/usr/share/pixmaps/$pkgname.png"
 }
