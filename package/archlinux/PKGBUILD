@@ -1,7 +1,7 @@
 # Maintainer: Bumsik Kim <k.bumsik@gmail.com>
 _pkgname_camelcase=VirtScreen
 pkgname=virtscreen
-pkgver=0.1.1
+pkgver=0.1.2
 pkgrel=1
 pkgdesc="Make your iPad/tablet/computer as a secondary monitor on Linux"
 arch=("i686" "x86_64")
@@ -22,7 +22,7 @@ install=
 changelog=
 source=(https://github.com/kbumsik/$_pkgname_camelcase/archive/$pkgver.tar.gz)
 noextract=()
-sha256sums=('0207fa4c2d1ddebd35d42ce7489e8a357bf565b7e962073cdfd6521d56b92fc4')
+sha256sums=('4f3f677588b41c83a56e027c3ffcfe5bfc470b0e14b784a83437f4711754857e')
 
 build() {
   echo "$pkgdir"
