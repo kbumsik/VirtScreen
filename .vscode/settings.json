@@ -1,7 +1,0 @@
-{
-  "python.venvPath": "${workspaceFolder}/ENV",
-  "[python]": {
-    "editor.formatOnSave": true
-  },
-  "python.pythonPath": "${workspaceFolder}/ENV/bin/python"
-}
