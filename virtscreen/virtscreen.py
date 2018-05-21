@@ -1,17 +1,19 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
+# Python standard packages
 import sys, os, subprocess, signal, re, atexit, time, json, shutil
 from pathlib import Path
 from enum import Enum
 from typing import List, Dict
-
+# PyQt5 packages
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QObject, QUrl, Qt, pyqtProperty, pyqtSlot, pyqtSignal, Q_ENUMS
 from PyQt5.QtGui import QIcon, QCursor
 from PyQt5.QtQml import qmlRegisterType, QQmlApplicationEngine, QQmlListProperty
-
+# Twisted and netifaces
 from twisted.internet import protocol, error
 from netifaces import interfaces, ifaddresses, AF_INET
+
 
 # -------------------------------------------------------------------------------
 # file path definitions
@@ -36,6 +38,7 @@ DEFAULT_CONFIG_PATH = BASE_PATH + "/data/config.default.json"
 ICON_PATH = BASE_PATH + "/icon/icon.png"
 QML_PATH = BASE_PATH + "/qml"
 MAIN_QML_PATH = QML_PATH + "/main.qml"
+
 
 # -------------------------------------------------------------------------------
 # Subprocess wrapper
@@ -64,6 +67,10 @@ class ProcessProtocol(protocol.ProcessProtocol):
         self.onErrRecevied = onErrRecevied
         self.onProcessEnded = onProcessEnded
         self.logfile = logfile
+        # We cannot import this at the top of the file because qt5reactor should
+        # be installed in the main function first.
+        from twisted.internet import reactor  # pylint: disable=E0401
+        self.reactor = reactor
 
     def run(self, arg: str):
         """Spawn a process
@@ -73,7 +80,7 @@ class ProcessProtocol(protocol.ProcessProtocol):
         """
 
         args = arg.split()
-        reactor.spawnProcess(self, args[0], args=args, env=os.environ)
+        self.reactor.spawnProcess(self, args[0], args=args, env=os.environ)
 
     def kill(self):
         """Kill a spawned process
@@ -551,7 +558,8 @@ class Backend(QObject):
         def _onEnded(exitCode):
             if exitCode is not 0:
                 self.vncState = self.VNCState.ERROR
-                self.onError.emit('X11VNC: Error occurred.\nDouble check if the port is already used.')
+                self.onError.emit('X11VNC: Error occurred.\n'
+                                  'Double check if the port is already used.')
                 self.vncState = self.VNCState.OFF  # TODO: better handling error state
             else:
                 self.vncState = self.VNCState.OFF
@@ -651,10 +659,10 @@ def main():
                                  "Cannot create ~/.virtscreen")
             sys.exit(1)
 
+    # Replace Twisted reactor with qt5reactor
     import qt5reactor  # pylint: disable=E0401
-
     qt5reactor.install()
-    from twisted.internet import utils, reactor  # pylint: disable=E0401
+    from twisted.internet import reactor  # pylint: disable=E0401
 
     app.setWindowIcon(QIcon(ICON_PATH))
     os.environ["QT_QUICK_CONTROLS_STYLE"] = "Material"
