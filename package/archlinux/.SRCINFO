@@ -1,0 +1,22 @@
+pkgbase = virtscreen
+	pkgdesc = Make your iPad/tablet/computer as a secondary monitor on Linux
+	pkgver = 0.1.1
+	pkgrel = 1
+	url = https://github.com/kbumsik/VirtScreen
+	arch = i686
+	arch = x86_64
+	license = GPL
+	makedepends = python-setuptools
+	depends = xorg-xrandr
+	depends = x11vnc
+	depends = python-pyqt5
+	depends = python-twisted
+	depends = python-netifaces
+	depends = python-qt5reactor
+	optdepends = arandr: for display settings option
+	provides = virtscreen
+	source = https://github.com/kbumsik/VirtScreen/archive/0.1.1.tar.gz
+	sha256sums = c584fe68ef296bced2ef5f3d88ffe81de1039c3062531c34547eeabd8c2f186d
+
+pkgname = virtscreen
+

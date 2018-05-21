@@ -1,19 +1,33 @@
 # See https://packaging.python.org/tutorials/distributing-packages/#packaging-your-project
 # for python packaging reference.
 
-.PHONY: wheel install clean
+.PHONY:
 
-wheel:
+python-wheel:
 	python setup.py bdist_wheel --universal
 
-upload:
+python-install:
+	python setup.py install --user
+
+pip-upload:
 	twine upload dist/*
 
-install:
-	python setup.py install --user
+.ONESHELL:
+
+arch-update:
+	cd package/archlinux
+	makepkg --printsrcinfo > .SRCINFO
+
+arch-install: arch-update
+	cd package/archlinux
+	makepkg -si
+
+arch-clean:
+	cd package/archlinux
+	rm -rf pkg src *.tar*
 
 launch:
 	./launch.sh
 
-clean:
+clean: arch-clean
 	rm -rf build dist virtscreen.egg-info

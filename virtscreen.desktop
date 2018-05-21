@@ -1,0 +1,11 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Encoding=UTF-8
+Type=Application
+Name=VirtScreen
+Comment=Make your iPad/tablet/computer as a secondary monitor on Linux
+Exec=virtscreen
+Icon=virtscreen
+Terminal=false
+StartupNotify=false
+Categories=Application;
