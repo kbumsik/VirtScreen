@@ -1,6 +1,9 @@
 # Pycharm
 .idea
 
+# VS Code
+.vscode
+
 # Compiled files from Qt
 *.qmlc
 *.xcf
