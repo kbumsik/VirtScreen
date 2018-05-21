@@ -1,13 +1,17 @@
-# Pycharm
+# IDE and text editor
 .idea
-
-# VS Code
 .vscode
 
 # Compiled files from Qt
 *.qmlc
-*.xcf
 
+# Python linter
+.pylintrc
+
+# files & folders for development use
+debug
+
+################################################################################
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
