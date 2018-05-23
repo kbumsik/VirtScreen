@@ -20,16 +20,7 @@ Or you can run it using a command line:
 $ virtscreen
 ```
 
-Note that any files related to VirtScreen, including password and log, will be stored in `~/.virtscreen` directory.
-
-## Dependancies
-
-You need [`x11vnc`](https://github.com/LibVNC/x11vnc) and `xrandr`. To install (example on Ubuntu):
-```bash
-$ sudo apt-get install x11vnc
-```
-
-## Installing
+## Installation
 
 ### Debian (Ubuntu)
 
@@ -45,16 +36,19 @@ $ aurman -S virtscreen
 
 ### Python `pip`
 
-If your distro is none of above, you may install it using `pip`:
+If your distro is none of above, you may install it using `pip`. In this case, you need to install the dependancies manually.
 
+#### Dependancies
+
+You need [`x11vnc`](https://github.com/LibVNC/x11vnc), `xrandr`, and PyQt5 libraries. To install (e.g. on Ubuntu):
 ```bash
-$ pip install virtscreen
+$ sudo apt-get install x11vnc qtbase5-dev  # On Debian/Ubuntu, xrandr is included.
 ```
 
-but a desktop entry won't be created.
+#### Installing
 
-### From the Git repository directly
+After you install the dependancies then run:
 
 ```bash
-$ python setup.py install # add --user option if you have permission problem
+$ sudo pip install virtscreen
 ```
