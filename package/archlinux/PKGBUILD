@@ -33,6 +33,7 @@ build() {
 package() {
   cd $_pkgname_camelcase-$pkgver
   /usr/bin/python3 setup.py install --root="$pkgdir/" --optimize=1 --skip-build
-  install -Dm644 "$pkgname.desktop" "$pkgdir/usr/share/applications/$pkgname.desktop"
-  install -Dm644 "$pkgname/icon/icon.png" "$pkgdir/usr/share/pixmaps/$pkgname.png"
+  # These are already installed by setup.py
+  # install -Dm644 "data/$pkgname.desktop" "$pkgdir/usr/share/applications/$pkgname.desktop"
+  # install -Dm644 "data/icon.png" "$pkgdir/usr/share/pixmaps/$pkgname.png"
 }

@@ -2,7 +2,7 @@
 
 > Make your iPad/tablet/computer as a secondary monitor on Linux.
 
-![gif example](https://github.com/kbumsik/VirtScreen/blob/d2387d3321bd4d110d890ca87703196df203dc89/icon/gif_example.gif?raw=true)
+![gif example](https://raw.githubusercontent.com/kbumsik/VirtScreen/master/data/gif_example.gif)
 
 VirtScreen is an easy-to-use Linux GUI app that creates a virtual secondary screen and shares it through VNC.
 
@@ -12,7 +12,7 @@ VirtScreen is based on [PyQt5](https://www.riverbankcomputing.com/software/pyqt/
 
 Upon installation (see Installing section to install), there will be a desktop entry called `virtscreen`
 
-![desktop entry](doc/desktop_entry.png)
+![desktop entry](https://raw.githubusercontent.com/kbumsik/VirtScreen/master/data/desktop_entry.png)
 
 Or you can run it using a command line:
 

@@ -177,8 +177,13 @@ setup(
     # http://docs.python.org/3.4/distutils/setupscript.html#installing-additional-files
     #
     # In this case, 'data_file' will be installed into '<sys.prefix>/my_data'
-
-    # data_files=[('my_data', ['data/data_file'])],  # Optional
+    data_files=[
+        # Desktop entries spec:
+        # https://www.freedesktop.org/wiki/Specifications/desktop-entry-spec/
+        ('/usr/share/applications', ['data/virtscreen.desktop']),
+        ('/usr/share/pixmaps', ['data/virtscreen.png']),
+        # ('share/man/man1', ['man/virtscreen.1'])
+    ],  # Optional
 
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow

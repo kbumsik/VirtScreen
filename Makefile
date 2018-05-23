@@ -4,10 +4,15 @@
 .PHONY:
 
 python-wheel:
-	python setup.py bdist_wheel --universal
+	/usr/bin/python3 setup.py bdist_wheel --universal
 
 python-install:
-	python setup.py install --user
+	sudo /usr/bin/python3 setup.py install
+
+python-uninstall:
+	sudo /usr/bin/pip3 uninstall virtscreen
+	sudo rm /usr/share/applications/virtscreen.desktop
+	sudo rm /usr/share/pixmaps/virtscreen.png
 
 pip-upload: python-wheel
 	twine upload dist/*
