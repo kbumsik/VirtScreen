@@ -25,9 +25,16 @@ del os.environ['HOME']  # Delete $HOME env for security reason. This will make
 os.environ['PATH'] = os.confstr("CS_PATH")  # Sanitize $PATH
 
 # Setting home path and base path
-HOME_PATH = str(Path.home())
+# https://www.freedesktop.org/software/systemd/man/file-hierarchy.html
+# HOME_PATH will point to ~/.config/virtscreen by default
+if 'XDG_CONFIG_HOME' in os.environ and os.environ['XDG_CONFIG_HOME']:
+    HOME_PATH = os.environ['XDG_CONFIG_HOME']
+else:
+    HOME_PATH = str(Path.home())
+    if HOME_PATH is not None:
+        HOME_PATH = HOME_PATH + "/.config"
 if HOME_PATH is not None:
-    HOME_PATH = HOME_PATH + "/.virtscreen"
+    HOME_PATH = HOME_PATH + "/virtscreen"
 BASE_PATH = os.path.dirname(__file__)
 # Path in ~/.virtscreen
 X11VNC_LOG_PATH = HOME_PATH + "/x11vnc_log.txt"
