@@ -10,7 +10,7 @@ VirtScreen is based on [PyQt5](https://www.riverbankcomputing.com/software/pyqt/
 
 ## How to use
 
-Upon installation (see Installing section to install), there will be a desktop entry called `virtscreen`
+Upon installation (see Installing section to install), there will be a desktop entry called `VirtScreen`
 
 ![desktop entry](https://raw.githubusercontent.com/kbumsik/VirtScreen/master/data/desktop_entry.png)
 

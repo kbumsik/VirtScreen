@@ -14,6 +14,9 @@ python-uninstall:
 	sudo rm /usr/share/applications/virtscreen.desktop
 	sudo rm /usr/share/pixmaps/virtscreen.png
 
+python-clean:
+	sudo rm -rf build dist virtscreen.egg-info virtscreen/qml/*.qmlc
+
 pip-upload: python-wheel
 	twine upload dist/*
 
@@ -67,5 +70,4 @@ arch-clean:
 launch:
 	./launch.sh
 
-clean: arch-clean deb-clean
-	rm -rf build dist virtscreen.egg-info virtscreen/qml/*.qmlc
+clean: arch-clean deb-clean python-clean
