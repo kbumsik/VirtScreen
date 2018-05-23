@@ -14,6 +14,24 @@ pip-upload: python-wheel
 
 .ONESHELL:
 
+# For Debian packaging, https://www.debian.org/doc/manuals/debmake-doc/ch08.en.html#setup-py
+deb-docker-build:
+	docker build -f package/debian/Dockerfile -t debmake .
+
+deb-docker:
+	docker run --privileged --interactive --tty -v $(shell pwd)/package/debian:/app debmake /bin/bash
+	
+deb-docker-rm:
+	docker image rm -f debmake
+
+deb-make:
+	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/debmake.sh
+
+deb-build:
+	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/debuild.sh
+
+deb-clean:
+	rm -rf package/debian/build
 
 # For AUR: https://wiki.archlinux.org/index.php/Python_package_guidelines
 #  and: https://wiki.archlinux.org/index.php/Creating_packages
@@ -44,5 +62,5 @@ arch-clean:
 launch:
 	./launch.sh
 
-clean: arch-clean
-	rm -rf build dist virtscreen.egg-info
+clean: arch-clean deb-clean
+	rm -rf build dist virtscreen.egg-info virtscreen/qml/*.qmlc
