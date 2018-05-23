@@ -599,7 +599,7 @@ class Backend(QObject):
             if exitCode is not 0:
                 self.onError.emit(f'Error opening "{running_program}".')
 
-        program_list = ["gnome-control-center display", "arandr"]
+        program_list = ["gnome-control-center display", "kcmshell5 kcm_kscreen", "arandr"]
         program = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, None)
         running_program = ''
         for arg in program_list:
