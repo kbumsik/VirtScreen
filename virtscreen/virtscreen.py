@@ -20,8 +20,11 @@ from netifaces import interfaces, ifaddresses, AF_INET
 # -------------------------------------------------------------------------------
 # Sanitize environment variables
 # https://wiki.sei.cmu.edu/confluence/display/c/ENV03-C.+Sanitize+the+environment+when+invoking+external+programs
-del os.environ['HOME']  # Delete $HOME env for security reason. This will make
+
+# Delete $HOME env for security reason. This will make
 # Path.home() to look up in the password directory (pwd module)
+if 'HOME' in os.environ:
+    del os.environ['HOME']
 os.environ['PATH'] = os.confstr("CS_PATH")  # Sanitize $PATH
 
 # Setting home path and base path

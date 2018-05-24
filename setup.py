@@ -180,8 +180,10 @@ setup(
     data_files=[
         # Desktop entries spec:
         # https://www.freedesktop.org/wiki/Specifications/desktop-entry-spec/
-        ('/usr/share/applications', ['data/virtscreen.desktop']),
-        ('/usr/share/pixmaps', ['data/virtscreen.png']),
+        ('share/applications', ['data/virtscreen.desktop']),
+        # $XDG_DATA_DIRS/icons
+        # https://standards.freedesktop.org/icon-theme-spec/icon-theme-spec-latest.html#directory_layout
+        ('share/icons', ['data/virtscreen.png']),
         # ('share/man/man1', ['man/virtscreen.1'])
     ],  # Optional
 

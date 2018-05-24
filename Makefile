@@ -7,15 +7,13 @@ python-wheel:
 	/usr/bin/python3 setup.py bdist_wheel --universal
 
 python-install:
-	sudo /usr/bin/python3 setup.py install
+	/usr/bin/pip3 install . --user
 
 python-uninstall:
-	sudo /usr/bin/pip3 uninstall virtscreen
-	sudo rm /usr/share/applications/virtscreen.desktop
-	sudo rm /usr/share/pixmaps/virtscreen.png
-
+	/usr/bin/pip3 uninstall virtscreen
+	
 python-clean:
-	sudo rm -rf build dist virtscreen.egg-info virtscreen/qml/*.qmlc
+	rm -rf build dist virtscreen.egg-info virtscreen/qml/*.qmlc
 
 pip-upload: python-wheel
 	twine upload dist/*
