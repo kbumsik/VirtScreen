@@ -1,0 +1,16 @@
+Source: virtscreen
+Section: utils
+Priority: optional
+Maintainer: Bumsik Kim <k.bumsik@gmail.com>
+Build-Depends: debhelper (>=9), dh-python, python3-all
+Standards-Version: 3.9.8
+Homepage: https://github.com/kbumsik/VirtScreen
+X-Python3-Version: >= 3.6
+
+Package: virtscreen
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends}, ${python3:Depends}, x11vnc, python3-pyqt5, qtbase5-dev, python3-twisted, python3-netifaces
+Description: Make your iPad/tablet/computer as a secondary monitor on Linux
+ VirtScreen is an easy-to-use Linux GUI app that creates a virtual 
+ secondary screen and shares it through VNC.

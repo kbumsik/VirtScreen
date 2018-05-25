@@ -33,8 +33,12 @@ deb-docker-rm:
 deb-make:
 	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/debmake.sh
 
-deb-build:
+deb-build: deb-clean deb-make
+	package/debian/copy_debian.sh
 	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/debuild.sh
+
+deb-contents:
+	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/contents.sh
 
 deb-clean:
 	rm -rf package/debian/build

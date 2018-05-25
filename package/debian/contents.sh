@@ -3,5 +3,4 @@
 source _common.sh
 
 cd build
-cd virtscreen-$PKGVER
-debuild
+dpkg -c virtscreen_$PKGVER-1_all.deb

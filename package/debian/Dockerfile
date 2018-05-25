@@ -11,6 +11,7 @@ RUN apt-get update && \
     ln /usr/bin/python3 /usr/bin/python && \
     ln /usr/bin/pip3 /usr/bin/pip && \
     rm -rf /var/cache/apt/archives/*.deb && \
+    pip install --upgrade pip setuptools && \
     useradd -c Builder -m -U builder
 
 USER builder
