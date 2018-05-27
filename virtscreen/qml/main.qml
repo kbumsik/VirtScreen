@@ -40,6 +40,9 @@ Item {
     Timer {
         id: timer
         function setTimeout(cb, delayTime) {
+            if (timer.running) {
+                console.log('Timer is already running!');
+            }
             timer.interval = delayTime;
             timer.repeat = false;
             timer.triggered.connect(cb);
@@ -97,9 +100,6 @@ Item {
             window.show();
             window.raise();
             window.requestActivate();
-            timer.setTimeout (function() {
-                sysTrayIcon.clicked = false;
-            }, 200);
         }
     }
 
@@ -111,7 +111,7 @@ Item {
                     "../icon/icon.png"
         visible: true
         property bool clicked: false
-        onMessageClicked: console.log("Message clicked")
+        
         Component.onCompleted: {
             // without delay, the message appears in a wierd place 
             timer.setTimeout (function() {
@@ -127,6 +127,9 @@ Item {
                 return;
             }
             sysTrayIcon.clicked = true;
+            timer.setTimeout (function() {
+                sysTrayIcon.clicked = false;
+            }, 200);
             mainLoader.active = true;
         }
 

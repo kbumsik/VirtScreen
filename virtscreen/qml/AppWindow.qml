@@ -10,7 +10,7 @@ ApplicationWindow {
     id: window
     visible: false
     flags: Qt.FramelessWindowHint
-    title: "Basic layouts"
+    title: "VirtScreen"
 
     property int theme_color: settings.theme_color
     Material.theme: Material.Light
