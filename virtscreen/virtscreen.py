@@ -25,6 +25,7 @@ from netifaces import interfaces, ifaddresses, AF_INET
 # Path.home() to look up in the password directory (pwd module)
 if 'HOME' in os.environ:
     del os.environ['HOME']
+os.environ['HOME'] = str(Path.home())
 os.environ['PATH'] = os.confstr("CS_PATH")  # Sanitize $PATH
 
 # Setting home path and base path
@@ -33,7 +34,7 @@ os.environ['PATH'] = os.confstr("CS_PATH")  # Sanitize $PATH
 if 'XDG_CONFIG_HOME' in os.environ and os.environ['XDG_CONFIG_HOME']:
     HOME_PATH = os.environ['XDG_CONFIG_HOME']
 else:
-    HOME_PATH = str(Path.home())
+    HOME_PATH = os.environ['HOME']
     if HOME_PATH is not None:
         HOME_PATH = HOME_PATH + "/.config"
 if HOME_PATH is not None:
@@ -453,7 +454,7 @@ class Backend(QObject):
     # Qt properties
     @pyqtProperty(str, constant=True)
     def settings(self):
-        with open(DEFAULT_CONFIG_PATH, "r") as f:
+        with open(CONFIG_PATH, "r") as f:
             return f.read()
 
     @settings.setter
@@ -627,8 +628,8 @@ class Backend(QObject):
         # auto stop on exit
         atexit.register(self.stopVNC, force=True)
 
-    @pyqtSlot()
-    def openDisplaySetting(self):
+    @pyqtSlot(str)
+    def openDisplaySetting(self, app: str = "arandr"):
         # define callbacks
         def _onConnected():
             print("External Display Setting opened.")
@@ -641,8 +642,12 @@ class Backend(QObject):
             self.onDisplaySettingClosed.emit()
             if exitCode is not 0:
                 self.onError.emit(f'Error opening "{running_program}".')
-
-        program_list = ["gnome-control-center display", "kcmshell5 kcm_kscreen", "arandr"]
+        with open(DATA_PATH, 'r') as f:
+            data = json.load(f)['displaySettingApps']
+            if app not in data:
+                self.onError.emit('Wrong display settings program')
+                return
+        program_list = [data[app]['args'], "arandr"]
         program = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, None)
         running_program = ''
         for arg in program_list:

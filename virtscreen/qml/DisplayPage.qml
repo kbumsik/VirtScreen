@@ -127,7 +127,7 @@ ColumnLayout {
                         backend.startVNC(settings.vnc.port);
                     }
                 });
-                backend.openDisplaySetting();
+                backend.openDisplaySetting(settings.displaySettingApp);
             }
         }      
     }
