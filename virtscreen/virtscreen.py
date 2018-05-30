@@ -45,6 +45,7 @@ X11VNC_PASSWORD_PATH = HOME_PATH + "/x11vnc_passwd"
 CONFIG_PATH = HOME_PATH + "/config.json"
 # Path in the program path
 DEFAULT_CONFIG_PATH = BASE_PATH + "/data/config.default.json"
+DATA_PATH = BASE_PATH + "/data/data.json"
 ICON_PATH = BASE_PATH + "/icon/icon.png"
 QML_PATH = BASE_PATH + "/qml"
 MAIN_QML_PATH = QML_PATH + "/main.qml"
@@ -405,16 +406,55 @@ class Backend(QObject):
         # Primary screen and mouse posistion
         self._primaryProp: DisplayProperty
         self.vncServer: ProcessProtocol
+        # Check config file 
+        # and initialize if needed
+        need_init = False
+        if not os.path.exists(CONFIG_PATH):
+            shutil.copy(DEFAULT_CONFIG_PATH, CONFIG_PATH)
+            need_init = True
+        # Version check
+        file_match = True
+        with open(CONFIG_PATH, 'r') as f_config, open(DATA_PATH, 'r') as f_data:
+            config = json.load(f_config)
+            data = json.load(f_data)
+            if config['version'] != data['version']:
+                file_match = False
+        # Override config with default when version doesn't match
+        if not file_match:
+            shutil.copy(DEFAULT_CONFIG_PATH, CONFIG_PATH)
+            need_init = True
+        # initialize config file
+        if need_init:
+            # 1. Available x11vnc options
+            # Get available x11vnc options from x11vnc first
+            p = SubprocessWrapper()
+            arg = 'x11vnc -opts'
+            ret = p.run(arg)
+            options = tuple(m.group(1) for m in re.finditer("\s*(-\w+)\s+", ret))
+            # Set/unset available x11vnc options flags in config
+            with open(CONFIG_PATH, 'r') as f, open(DATA_PATH, 'r') as f_data:
+                config = json.load(f)
+                data = json.load(f_data)
+                for key, value in config["x11vncOptions"].items():
+                    if key in options:
+                        value["available"] = True
+                    else:
+                        value["available"] = False
+                # 2. Default Display settings app for a Desktop Environment
+                desktop_environ = os.environ['XDG_CURRENT_DESKTOP'].lower()
+                for key, value in data['displaySettingApps'].items():
+                    for de in value['XDG_CURRENT_DESKTOP']:
+                        if de in desktop_environ:
+                            config["displaySettingApp"] = key
+            # Save the new config
+            with open(CONFIG_PATH, 'w') as f:
+                f.write(json.dumps(config, indent=4, sort_keys=True))
 
     # Qt properties
     @pyqtProperty(str, constant=True)
     def settings(self):
-        try:
-            with open(CONFIG_PATH, "r") as f:
-                return f.read()
-        except FileNotFoundError:
-            with open(DEFAULT_CONFIG_PATH, "r") as f:
-                return f.read()
+        with open(DEFAULT_CONFIG_PATH, "r") as f:
+            return f.read()
 
     @settings.setter
     def settings(self, json_str):
@@ -666,7 +706,7 @@ def main():
             os.makedirs(HOME_PATH)
         except:
             QMessageBox.critical(None, "VirtScreen",
-                                 "Cannot create ~/.virtscreen")
+                                 "Cannot create ~/.config/virtscreen")
             sys.exit(1)
 
     # Replace Twisted reactor with qt5reactor

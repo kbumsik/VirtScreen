@@ -1,0 +1,30 @@
+{
+    "version": "0.2",
+    "x11vncOptions": {
+        "-ncache": {
+            "description": "Cache",
+            "long_description": "Enables cache"
+        },
+        "-multiptr": {
+            "description": "Show mouse pointer",
+            "long_description": "This also enables input per-client."
+        }
+    },
+    "displaySettingApps": {
+        "gnome": {
+            "name": "GNOME",
+            "args": "gnome-control-center display",
+            "XDG_CURRENT_DESKTOP": ["gnome", "unity"]
+        },
+        "kde": {
+            "name": "KDE",
+            "args": "kcmshell5 kcm_kscreen",
+            "XDG_CURRENT_DESKTOP": ["kde"]
+        },
+        "arandr": {
+            "name": "ARandR",
+            "args": "arandr",
+            "XDG_CURRENT_DESKTOP": []
+        }
+    }
+}

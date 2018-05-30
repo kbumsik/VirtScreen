@@ -1,5 +1,6 @@
 {
-    "version": 0.1,
+    "version": "0.2",
+    "x11vncVersion": "0.9.15",
     "theme_color": 8,
     "virt": {
         "device": "VIRTUAL1",
@@ -11,6 +12,19 @@
     "vnc": {
         "port": 5900,
         "autostart": false
+    },
+    "displaySettingApp": "arandr",
+    "x11vncOptions": {
+        "-ncache": {
+            "available": null,
+            "enabled": false,
+            "arg": 10
+        },
+        "-multiptr": {
+            "available": null,
+            "enabled": true,
+            "arg": null
+        }
     },
     "presets": []
 }
