@@ -76,8 +76,7 @@ ColumnLayout {
                     delegate: ItemDelegate {
                         width: deviceComboBox.width
                         text: modelData.name
-                        font.weight: deviceComboBox.currentIndex === index ? Font.DemiBold : Font.Normal
-                        highlighted: ListView.isCurrentItem
+                        font.weight: deviceComboBox.currentIndex === index ? Font.Bold : Font.Normal
                         enabled: modelData.connected ? false : true
                     }
                 }

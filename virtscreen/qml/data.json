@@ -12,16 +12,19 @@
     },
     "displaySettingApps": {
         "gnome": {
+            "value": "gnome",
             "name": "GNOME",
             "args": "gnome-control-center display",
             "XDG_CURRENT_DESKTOP": ["gnome", "unity"]
         },
         "kde": {
+            "value": "kde",
             "name": "KDE",
             "args": "kcmshell5 kcm_kscreen",
             "XDG_CURRENT_DESKTOP": ["kde"]
         },
         "arandr": {
+            "value": "arandr",
             "name": "ARandR",
             "args": "arandr",
             "XDG_CURRENT_DESKTOP": []

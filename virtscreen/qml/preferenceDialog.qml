@@ -13,8 +13,46 @@ Dialog {
     x: (window.width - width) / 2
     y: (window.width - height) / 2 
     width: popupWidth
+    height: 250
+
+    Component.onCompleted: {
+        var request = new XMLHttpRequest();
+        request.open('GET', 'data.json');
+        request.onreadystatechange = function(event) {
+            if (request.readyState == XMLHttpRequest.DONE) {
+                var data = JSON.parse(request.responseText).displaySettingApps;
+                var combobox = displaySettingAppComboBox;
+                combobox.model = Object.keys(data).map(function(k){return data[k]});
+                combobox.currentIndex = Object.keys(data).indexOf(settings.displaySettingApp);
+            }
+        };
+        request.send();
+    }
+
     ColumnLayout {
         anchors.fill: parent
+
+        RowLayout {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            Label { id: displaySettingAppLabel; text: "Display setting program"; }
+            ComboBox {
+                id: displaySettingAppComboBox
+                anchors.left: displaySettingAppLabel.right
+                anchors.right: parent.right
+                anchors.leftMargin: 10
+                textRole: "name"
+                onActivated: function(index) {
+                    settings.displaySettingApp = model[index].value;
+                }
+                delegate: ItemDelegate {
+                    width: parent.width
+                    text: modelData.name
+                    font.weight: displaySettingAppComboBox.currentIndex === index ? Font.Bold : Font.Normal
+                }
+            }
+        }
+
         RowLayout {
             anchors.left: parent.left
             anchors.right: parent.right
@@ -51,6 +89,11 @@ Dialog {
                     }
                 }
             }
+        }
+
+        RowLayout {
+            // Empty layout
+            Layout.fillHeight: true
         }
     }
     onAccepted: {}
