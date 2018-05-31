@@ -713,6 +713,10 @@ def main():
             QMessageBox.critical(None, "VirtScreen",
                                  "Cannot create ~/.config/virtscreen")
             sys.exit(1)
+    if not shutil.which('x11vnc'):
+        QMessageBox.critical(None, "VirtScreen",
+                             "x11vnc is not installed.")
+        sys.exit(1)
 
     # Replace Twisted reactor with qt5reactor
     import qt5reactor  # pylint: disable=E0401
