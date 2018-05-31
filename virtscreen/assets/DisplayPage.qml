@@ -109,7 +109,7 @@ ColumnLayout {
                 window.autoClose = false;
                 if (backend.vncState != Backend.OFF) {
                     console.log("vnc is running");
-                    backend.stopVNC();
+                    stopVNC();
                     var restoreVNC = true;
                     if (autostart) {
                         autostart = false;
@@ -123,7 +123,7 @@ ColumnLayout {
                         autostart = true;
                     }
                     if (restoreVNC) {
-                        backend.startVNC(settings.vnc.port);
+                        startVNC();
                     }
                 });
                 backend.openDisplaySetting(settings.displaySettingApp);

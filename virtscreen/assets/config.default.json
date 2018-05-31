@@ -24,6 +24,11 @@
             "available": null,
             "enabled": true,
             "arg": null
+        },
+        "-repeat":  {
+            "available": null,
+            "enabled": true,
+            "arg": null
         }
     },
     "presets": []

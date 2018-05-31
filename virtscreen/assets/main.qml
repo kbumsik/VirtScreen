@@ -10,9 +10,28 @@ Item {
     property var settings: JSON.parse(backend.settings)
     property bool autostart: settings.vnc.autostart
 
+    function startVNC () {
+        var options = '';
+        var data = settings.x11vncOptions; 
+        for (var key in data) {
+            if(data[key].available && data[key].enabled) {
+                options += key + ' ';
+                if(data[key].arg !== null) {
+                    options += data[key].arg.toString() + ' ';
+                }
+            }
+        }
+        console.log('options: ', options);
+        backend.startVNC(settings.vnc.port, options);
+    }
+
+    function stopVNC () {
+        backend.stopVNC();
+    }
+
     function switchVNC () {
         if ((backend.vncState == Backend.OFF) && backend.virtScreenCreated) {
-            backend.startVNC(settings.vnc.port);
+            startVNC();
         }
     }
 
@@ -180,7 +199,7 @@ Item {
                                         autostart = true;
                                     }
                                 });
-                                backend.stopVNC();
+                                stopVNC();
                             } else {
                                 backend.deleteVirtScreen();
                             }
@@ -194,7 +213,7 @@ Item {
                       backend.vncState == Backend.OFF ? "Start VNC Server" : "Stop VNC Server"
                 enabled: autostart ? false : 
                          backend.virtScreenCreated ? true : false
-                onTriggered: backend.vncState == Backend.OFF ? backend.startVNC(settings.vnc.port) : backend.stopVNC()
+                onTriggered: backend.vncState == Backend.OFF ? startVNC() : stopVNC()
             }
             MenuItem {
                 separator: true

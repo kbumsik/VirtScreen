@@ -2,12 +2,19 @@
     "version": "0.2",
     "x11vncOptions": {
         "-ncache": {
+            "value": "-ncache",
             "description": "Client side caching",
             "long_description": "Enables cache"
         },
         "-multiptr": {
+            "value": "-multiptr",
             "description": "Show mouse pointer",
             "long_description": "This also enables input per-client."
+        },
+        "-repeat":  {
+            "value": "-repeat",
+            "description": "Keyboard auto repeating",
+            "long_description": "Enables X server key auto repeat"
         }
     },
     "displaySettingApps": {

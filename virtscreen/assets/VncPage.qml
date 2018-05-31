@@ -45,6 +45,17 @@ ColumnLayout {
                     onClicked: passwordDialog.open()
                 }
             }
+            RowLayout {
+                Layout.alignment: Qt.AlignRight
+                Button {
+                    text: "Advanced"
+                    font.capitalization: Font.MixedCase
+                    onClicked: vncOptionsLoader.active = true;
+                    background.opacity : 0
+                    onHoveredChanged: hovered ? background.opacity = 0.4
+                                               :background.opacity = 0;
+                }
+            }
         }
     }
     RowLayout {
@@ -64,7 +75,7 @@ ColumnLayout {
                 autostart = checked;
                 if ((checked == true) && (backend.vncState == Backend.OFF) && 
                         backend.virtScreenCreated) {
-                    backend.startVNC(settings.vnc.port);
+                    startVNC();
                 }
             }
         }

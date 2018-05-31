@@ -277,6 +277,17 @@ ApplicationWindow {
         }
     }
     
+    Loader {
+        id: vncOptionsLoader
+        active: false
+        source: "VncOptionsDialog.qml"
+        onLoaded: {
+            item.onClosed.connect(function() {
+                vncOptionsLoader.active = false;
+            });
+        }
+    }
+
     SwipeView {
         anchors.top: tabBar.bottom
         anchors.bottom: parent.bottom

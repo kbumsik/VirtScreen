@@ -579,8 +579,8 @@ class Backend(QObject):
         else:
             self.onError.emit("Failed deleting the password file")
 
-    @pyqtSlot(int)
-    def startVNC(self, port):
+    @pyqtSlot(int, str)
+    def startVNC(self, port, options=''):
         # Check if a virtual screen created
         if not self.virtScreenCreated:
             self.onError.emit("Virtual Screen not crated.")
@@ -621,7 +621,7 @@ class Backend(QObject):
         self.vncServer = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, logfile)
         virt = self.xrandr.get_virtual_screen()
         clip = f"{virt.width}x{virt.height}+{virt.x_offset}+{virt.y_offset}"
-        arg = f"x11vnc -multiptr -repeat -rfbport {port} -clip {clip}"
+        arg = f"x11vnc -rfbport {port} -clip {clip} {options}"
         if self.vncUsePassword:
             arg += f" -rfbauth {X11VNC_PASSWORD_PATH}"
         self.vncServer.run(arg)
