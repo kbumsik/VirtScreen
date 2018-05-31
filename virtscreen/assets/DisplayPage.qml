@@ -59,26 +59,14 @@ ColumnLayout {
                 }
             }
             RowLayout {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                Label { id: deviceLabel; text: "Device"; }
-                ComboBox {
-                    id: deviceComboBox
-                    anchors.left: deviceLabel.right
-                    anchors.right: parent.right
-                    anchors.leftMargin: 100
-                    textRole: "name"
-                    model: backend.screens
-                    currentIndex: backend.virtScreenIndex
-                    onActivated: function(index) {
-                        backend.virtScreenIndex = index
-                    } 
-                    delegate: ItemDelegate {
-                        width: deviceComboBox.width
-                        text: modelData.name
-                        font.weight: deviceComboBox.currentIndex === index ? Font.Bold : Font.Normal
-                        enabled: modelData.connected ? false : true
-                    }
+                Layout.alignment: Qt.AlignRight
+                Button {
+                    text: "Advanced"
+                    font.capitalization: Font.MixedCase
+                    onClicked: displayOptionsLoader.active = true;
+                    background.opacity : 0
+                    onHoveredChanged: hovered ? background.opacity = 0.4
+                                               :background.opacity = 0;
                 }
             }
         }

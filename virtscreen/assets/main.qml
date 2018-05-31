@@ -10,6 +10,12 @@ Item {
     property var settings: JSON.parse(backend.settings)
     property bool autostart: settings.vnc.autostart
 
+    function createVirtScreen () {
+        backend.createVirtScreen(settings.virt.device, settings.virt.width,
+                                settings.virt.height, settings.virt.portrait,
+                                settings.virt.hidpi);
+    }
+
     function startVNC () {
         var options = '';
         var data = settings.x11vncOptions; 
@@ -185,8 +191,7 @@ Item {
                     // Give a very short delay to show busyDialog.
                     timer.setTimeout (function() {
                         if (!backend.virtScreenCreated) {
-                            backend.createVirtScreen(settings.virt.width, settings.virt.height,
-                                                    settings.virt.portrait, settings.virt.hidpi);
+                            createVirtScreen();
                         } else {
                             // If auto start enabled, stop VNC first then 
                             if (autostart && (backend.vncState != Backend.OFF)) {

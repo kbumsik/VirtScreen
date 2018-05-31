@@ -278,6 +278,17 @@ ApplicationWindow {
     }
     
     Loader {
+        id: displayOptionsLoader
+        active: false
+        source: "DisplayOptionsDialog.qml"
+        onLoaded: {
+            item.onClosed.connect(function() {
+                displayOptionsLoader.active = false;
+            });
+        }
+    }
+
+    Loader {
         id: vncOptionsLoader
         active: false
         source: "VncOptionsDialog.qml"

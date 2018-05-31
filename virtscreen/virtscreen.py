@@ -257,7 +257,6 @@ class DisplayProperty(QObject):
 # Screen adjustment class
 # -------------------------------------------------------------------------------
 class XRandR(SubprocessWrapper):
-    DEFAULT_VIRT_SCREEN = "VIRTUAL1"
     VIRT_SCREEN_SUFFIX = "_virt"
 
     def __init__(self):
@@ -266,6 +265,7 @@ class XRandR(SubprocessWrapper):
         self.screens: List[Display] = []
         self.virt: Display() = None
         self.primary: Display() = None
+        self.virt_name: str = ''
         self.virt_idx: int = None
         self.primary_idx: int = None
         # Primary display
@@ -276,13 +276,14 @@ class XRandR(SubprocessWrapper):
         self.primary = None
         self.virt = None
         self.screens = []
+        self.virt_idx = None
         self.primary_idx = None
         pattern = re.compile(r"^(\S*)\s+(connected|disconnected)\s+((primary)\s+)?"
                              r"((\d+)x(\d+)\+(\d+)\+(\d+)\s+)?.*$", re.M)
         for idx, match in enumerate(pattern.finditer(output)):
             screen = Display()
             screen.name = match.group(1)
-            if (self.virt_idx is None) and (screen.name == self.DEFAULT_VIRT_SCREEN):
+            if self.virt_name and screen.name == self.virt_name:
                 self.virt_idx = idx
             screen.primary = True if match.group(4) else False
             if screen.primary:
@@ -299,19 +300,23 @@ class XRandR(SubprocessWrapper):
         print("Display information:")
         for s in self.screens:
             print("\t", s)
+        if self.primary_idx is None:
+            raise RuntimeError("There is no primary screen detected.\n"
+                               "Go to display settings and set\n"
+                               "a primary screen\n")
         if self.virt_idx == self.primary_idx:
             raise RuntimeError("Virtual screen must be selected other than the primary screen")
-        if self.virt_idx is None:
-            for idx, screen in enumerate(self.screens):
-                if not screen.connected and not screen.active:
-                    self.virt_idx = idx
-                    break
-            if self.virt_idx is None:
-                raise RuntimeError("There is no available devices for virtual screen")
-        self.virt = self.screens[self.virt_idx]
+        if self.virt_idx is not None:
+            self.virt = self.screens[self.virt_idx]
+        elif self.virt_name and self.virt_idx is None:
+            raise RuntimeError("No virtual screen name found")
         self.primary = self.screens[self.primary_idx]
 
     def _add_screen_mode(self, width, height, portrait, hidpi) -> None:
+        if not self.virt or not self.virt_name:
+            raise RuntimeError("No virtual screen selected.\n"
+                               "Go to Display->Virtual Display->Advaced\n"
+                               "To select a device.")
         # Set virtual screen property first
         self.virt.width = width
         self.virt.height = height
@@ -353,6 +358,7 @@ class XRandR(SubprocessWrapper):
 
     def create_virtual_screen(self, width, height, portrait=False, hidpi=False) -> None:
         print("creating: ", self.virt)
+        self._update_screens()
         self._add_screen_mode(width, height, portrait, hidpi)
         self.check_output(f"xrandr --output {self.virt.name} --mode {self.mode_name}")
         self.check_output("sleep 5")
@@ -360,6 +366,7 @@ class XRandR(SubprocessWrapper):
         self._update_screens()
 
     def delete_virtual_screen(self) -> None:
+        self._update_screens()
         try:
             self.virt.name
             self.mode_name
@@ -400,7 +407,6 @@ class Backend(QObject):
         # Virtual screen properties
         self.xrandr: XRandR = XRandR()
         self._virtScreenCreated: bool = False
-        self._virtScreenIndex: int = self.xrandr.virt_idx
         # VNC server properties
         self._vncUsePassword: bool = False
         self._vncState: self.VNCState = self.VNCState.OFF
@@ -473,18 +479,11 @@ class Backend(QObject):
 
     @pyqtProperty(QQmlListProperty, constant=True)
     def screens(self):
-        return QQmlListProperty(DisplayProperty, self, [DisplayProperty(x) for x in self.xrandr.screens])
-
-    @pyqtProperty(int, notify=onVirtScreenIndexChanged)
-    def virtScreenIndex(self):
-        return self._virtScreenIndex
-
-    @virtScreenIndex.setter
-    def virtScreenIndex(self, virtScreenIndex):
-        print("Changing virt to ", virtScreenIndex)
-        self.xrandr.virt_idx = virtScreenIndex
-        self.xrandr.virt = self.xrandr.screens[self.xrandr.virt_idx]
-        self._virtScreenIndex = virtScreenIndex
+        try:
+            return QQmlListProperty(DisplayProperty, self, [DisplayProperty(x) for x in self.xrandr.screens])
+        except RuntimeError as e:
+            self.onError.emit(str(e))
+            return QQmlListProperty(DisplayProperty, self, [])
 
     @pyqtProperty(bool, notify=onVncUsePasswordChanged)
     def vncUsePassword(self):
@@ -523,7 +522,11 @@ class Backend(QObject):
 
     @pyqtProperty(DisplayProperty)
     def primary(self):
-        self._primaryProp = DisplayProperty(self.xrandr.get_primary_screen())
+        try:
+            self._primaryProp = DisplayProperty(self.xrandr.get_primary_screen())
+        except RuntimeError as e:
+            self.onError.emit(str(e))
+            return
         return self._primaryProp
 
     @pyqtProperty(int)
@@ -537,13 +540,17 @@ class Backend(QObject):
         return cursor.y()
 
     # Qt Slots
-    @pyqtSlot(int, int, bool, bool)
-    def createVirtScreen(self, width, height, portrait, hidpi):
+    @pyqtSlot(str, int, int, bool, bool)
+    def createVirtScreen(self, device, width, height, portrait, hidpi):
+        self.xrandr.virt_name = device
         print("Creating a Virtual Screen...")
         try:
             self.xrandr.create_virtual_screen(width, height, portrait, hidpi)
         except subprocess.CalledProcessError as e:
             self.onError.emit(str(e.cmd) + '\n' + e.stdout.decode('utf-8'))
+            return
+        except RuntimeError as e:
+            self.onError.emit(str(e))
             return
         self.virtScreenCreated = True
 
@@ -554,7 +561,11 @@ class Backend(QObject):
             self.onError.emit("Turn off the VNC server first")
             self.virtScreenCreated = True
             return
-        self.xrandr.delete_virtual_screen()
+        try:
+            self.xrandr.delete_virtual_screen()
+        except RuntimeError as e:
+            self.onError.emit(str(e))
+            return
         self.virtScreenCreated = False
 
     @pyqtSlot(str)
@@ -619,7 +630,11 @@ class Backend(QObject):
 
         logfile = open(X11VNC_LOG_PATH, "wb")
         self.vncServer = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, logfile)
-        virt = self.xrandr.get_virtual_screen()
+        try:
+            virt = self.xrandr.get_virtual_screen()
+        except RuntimeError as e:
+            self.onError.emit(str(e))
+            return
         clip = f"{virt.width}x{virt.height}+{virt.x_offset}+{virt.y_offset}"
         arg = f"x11vnc -rfbport {port} -clip {clip} {options}"
         if self.vncUsePassword:
@@ -717,7 +732,11 @@ def main():
         QMessageBox.critical(None, "VirtScreen",
                              "x11vnc is not installed.")
         sys.exit(1)
-
+    try:
+        test = XRandR()
+    except RuntimeError as e:
+        QMessageBox.critical(None, "VirtScreen", str(e))
+        sys.exit(1)
     # Replace Twisted reactor with qt5reactor
     import qt5reactor  # pylint: disable=E0401
     qt5reactor.install()

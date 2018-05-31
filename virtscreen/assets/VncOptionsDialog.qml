@@ -4,7 +4,6 @@ import QtQuick.Controls.Material 2.3
 import QtQuick.Layouts 1.3
 
 Dialog {
-    id: preferenceDialog
     title: "VNC Options"
     focus: true
     modal: true

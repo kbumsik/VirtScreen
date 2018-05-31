@@ -84,7 +84,7 @@ ColumnLayout {
     GroupBox {
         title: "Available IP addresses"
         Layout.fillWidth: true
-        implicitHeight: 150
+        implicitHeight: 145
         ColumnLayout {
             anchors.fill: parent
             ListView {
