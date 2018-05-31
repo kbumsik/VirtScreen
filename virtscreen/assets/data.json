@@ -2,7 +2,7 @@
     "version": "0.2",
     "x11vncOptions": {
         "-ncache": {
-            "description": "Cache",
+            "description": "Client side caching",
             "long_description": "Enables cache"
         },
         "-multiptr": {

@@ -45,11 +45,11 @@ X11VNC_LOG_PATH = HOME_PATH + "/x11vnc_log.txt"
 X11VNC_PASSWORD_PATH = HOME_PATH + "/x11vnc_passwd"
 CONFIG_PATH = HOME_PATH + "/config.json"
 # Path in the program path
-DEFAULT_CONFIG_PATH = BASE_PATH + "/data/config.default.json"
 ICON_PATH = BASE_PATH + "/icon/icon.png"
-QML_PATH = BASE_PATH + "/qml"
-DATA_PATH = QML_PATH + "/data.json"
-MAIN_QML_PATH = QML_PATH + "/main.qml"
+ASSETS_PATH = BASE_PATH + "/assets"
+DATA_PATH = ASSETS_PATH + "/data.json"
+DEFAULT_CONFIG_PATH = ASSETS_PATH + "/config.default.json"
+MAIN_QML_PATH = ASSETS_PATH + "/main.qml"
 
 
 # -------------------------------------------------------------------------------
