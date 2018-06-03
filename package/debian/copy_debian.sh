@@ -3,5 +3,9 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $DIR/_common.sh
 
-echo $DIR/{control,rules,README.Debian} $DIR/build/virtscreen-$PKGVER/debian
-cp $DIR/{control,rules,README.Debian} $DIR/build/virtscreen-$PKGVER/debian
+if [ $1 = "virtualenv" ]; then
+    cp $DIR/control.virtualenv $DIR/build/virtscreen-$PKGVER/debian/control
+    cp $DIR/README.Debian $DIR/build/virtscreen-$PKGVER/debian/
+else
+    cp $DIR/{control,rules,README.Debian} $DIR/build/virtscreen-$PKGVER/debian
+fi

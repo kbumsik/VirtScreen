@@ -4,4 +4,8 @@ source _common.sh
 
 cd build
 cd virtscreen-$PKGVER
-debuild
+if [ $1 = "virtualenv" ]; then
+    dpkg-buildpackage -b
+else
+    debuild
+fi

@@ -40,6 +40,13 @@ deb-build: deb-clean deb-make
 deb-contents:
 	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/contents.sh
 
+deb-env-make:
+	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/debmake.sh virtualenv
+
+deb-env-build: deb-clean deb-env-make
+	package/debian/copy_debian.sh virtualenv
+	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/debuild.sh virtualenv
+
 deb-clean:
 	rm -rf package/debian/build
 

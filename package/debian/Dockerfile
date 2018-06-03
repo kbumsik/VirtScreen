@@ -11,7 +11,13 @@ RUN apt-get update && \
     ln /usr/bin/python3 /usr/bin/python && \
     ln /usr/bin/pip3 /usr/bin/pip && \
     rm -rf /var/cache/apt/archives/*.deb && \
+    pip install virtualenv && \
     pip install --upgrade pip setuptools && \
     useradd -c Builder -m -U builder
 
 USER builder
+
+# Get Miniconda and make it the main Python interpreter
+RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+    bash ~/miniconda.sh -b -p ~/miniconda && \
+    rm ~/miniconda.sh

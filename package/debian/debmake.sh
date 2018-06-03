@@ -12,4 +12,9 @@ mv VirtScreen-$PKGVER virtscreen-$PKGVER
 mv $PKGVER.tar.gz virtscreen-$PKGVER.tar.gz
 
 cd virtscreen-$PKGVER
-debmake -b':py3'
+if [ $1 = "virtualenv" ]; then
+    cp ../../Makefile.virtualenv Makefile
+    debmake -b':sh'
+else
+    debmake -b':py3'
+fi
