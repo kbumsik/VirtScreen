@@ -24,31 +24,35 @@ $ virtscreen
 
 ### Debian (Ubuntu)
 
-A PPA package will be available soon.
+#### `.deb` package
+
+```bash
+sudo apt-get update
+sudo apt-get install x11vnc qtbase5-dev
+wget https://github.com/kbumsik/VirtScreen/releases/download/0.2.0/virtscreen_0.2.0-1_all.deb
+sudo dpkg -i virtscreen_0.2.0-1_all.deb 
+rm virtscreen_0.2.0-1_all.deb
+```
 
 ### Arch Linux (AUR)
 
 There is [`virtscreen` AUR package](https://aur.archlinux.org/packages/virtscreen/) available. Though there are many ways to install the AUR package, one of the easiest way is to use [`aurman`](https://github.com/polygamma/aurman) AUR helper:
 
 ```bash
-$ aurman -S virtscreen
+aurman -S virtscreen
 ```
 
 ### Python `pip`
 
 If your distro is none of above, you may install it using `pip`. In this case, you need to install the dependancies manually.
 
-#### Dependancies
-
 You need [`x11vnc`](https://github.com/LibVNC/x11vnc), `xrandr`, and PyQt5 libraries. To install (e.g. on Ubuntu):
 ```bash
-$ sudo apt-get install x11vnc qtbase5-dev  # On Debian/Ubuntu, xrandr is included.
+sudo apt-get install x11vnc qtbase5-dev  # On Debian/Ubuntu, xrandr is included.
 ```
-
-#### Installing
 
 After you install the dependancies then run:
 
 ```bash
-$ sudo pip install virtscreen
+sudo pip install virtscreen
 ```
