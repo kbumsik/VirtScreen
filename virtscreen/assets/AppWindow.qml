@@ -153,7 +153,7 @@ ApplicationWindow {
                 anchors.horizontalCenter: parent.horizontalCenter
                 horizontalAlignment: Text.AlignHCenter
                 font { weight: Font.Bold; pointSize: 15 }
-                text: "VirtScreen"
+                text: "VirtScreen" + " v" + settings.version
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
