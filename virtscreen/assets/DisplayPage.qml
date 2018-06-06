@@ -6,7 +6,7 @@ import VirtScreen.Backend 1.0
 
 ColumnLayout {
     GroupBox {
-        title: "Virtual Display"
+        title: "Virtual Screen"
         Layout.fillWidth: true
         enabled: backend.virtScreenCreated ? false : true
         ColumnLayout {

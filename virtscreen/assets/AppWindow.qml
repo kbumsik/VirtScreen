@@ -50,7 +50,7 @@ ApplicationWindow {
     menuBar: ToolBar {
         id: toolbar
         font.weight: Font.Medium
-        font.pixelSize: height * 0.3
+        font.pixelSize: height * 0.34
 
         RowLayout {
             anchors.fill: parent
@@ -156,27 +156,27 @@ ApplicationWindow {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 horizontalAlignment: Text.AlignHCenter
-                font { weight: Font.Bold; pixelSize: 15 }
+                font { weight: Font.Bold; pixelSize: 20 }
                 text: "VirtScreen" + " v" + settings.version
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 horizontalAlignment: Text.AlignHCenter
-                font { pixelSize: 10 }
+                font { pixelSize: 13 }
                 text: "Make your iPad/tablet/computer<br/>as a secondary monitor.<br/>"
             }
             Text {
-                font { pixelSize: 11 }
+                font { pixelSize: 14 }
                 text: "- <a href='https://github.com/kbumsik/VirtScreen'>Project Website</a>"
                 onLinkActivated: Qt.openUrlExternally(link)
             }
             Text {
-                font { pixelSize: 11 }
+                font { pixelSize: 14 }
                 text: "- <a href='https://github.com/kbumsik/VirtScreen/issues'>Issues & Bug Report</a>"
                 onLinkActivated: Qt.openUrlExternally(link)
             }
             Text {
-                font { pixelSize: 10 }
+                font { pixelSize: 14 }
                 anchors.horizontalCenter: parent.horizontalCenter
                 horizontalAlignment: Text.AlignHCenter
                 lineHeight: 0.7
@@ -184,7 +184,7 @@ ApplicationWindow {
                 onLinkActivated: Qt.openUrlExternally(link)
             }
             Text {
-                font { pixelSize: 9 }
+                font { pixelSize: 11 }
                 anchors.horizontalCenter: parent.horizontalCenter
                 horizontalAlignment: Text.AlignHCenter
                 text: "This program comes with absolutely no warranty.<br/>" +

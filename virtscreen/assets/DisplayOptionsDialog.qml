@@ -52,14 +52,15 @@ Dialog {
         }
 
         Text {
-            font { pointSize: 10 }
+            Layout.fillWidth: true
+            font { pixelSize: 14 }
             wrapMode: Text.WordWrap
-            text: "<b>Warning</b>: Edit only if 'VIRTUAL1' is not available<br/>" +
-                  "If so, please note that the virtual screen may be<br/>" +
-                  "unstable/unavailable depending on a graphic<br/>" +
+            text: "<b>Warning</b>: Edit only if 'VIRTUAL1' is not available. " +
+                  "If so, please note that the virtual screen may be " +
+                  "unstable/unavailable depending on a graphic " +
                   "card and its driver."
         }
-
+        
         RowLayout {
             // Empty layout
             Layout.fillHeight: true

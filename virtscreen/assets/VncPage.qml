@@ -104,7 +104,7 @@ ColumnLayout {
                     readOnly: true
                     selectByMouse: true
                     anchors.horizontalCenter: parent.horizontalCenter
-                    font.pointSize: 12
+                    font.pixelSize: 14
                 }
             }
         }
