@@ -22,6 +22,10 @@ ApplicationWindow {
     height: 540
     property int margin: 10
     property int popupWidth: width - 26
+    
+    screen: Qt.application.screens[0]
+    x: screen.virtualX
+    y: screen.virtualY
 
     // hide screen when loosing focus
     property bool autoClose: true
@@ -46,7 +50,7 @@ ApplicationWindow {
     menuBar: ToolBar {
         id: toolbar
         font.weight: Font.Medium
-        font.pointSize: 11 //parent.font.pointSize + 1
+        font.pixelSize: height * 0.3
 
         RowLayout {
             anchors.fill: parent
@@ -152,24 +156,27 @@ ApplicationWindow {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 horizontalAlignment: Text.AlignHCenter
-                font { weight: Font.Bold; pointSize: 15 }
+                font { weight: Font.Bold; pixelSize: 15 }
                 text: "VirtScreen" + " v" + settings.version
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 horizontalAlignment: Text.AlignHCenter
+                font { pixelSize: 10 }
                 text: "Make your iPad/tablet/computer<br/>as a secondary monitor.<br/>"
             }
             Text {
+                font { pixelSize: 11 }
                 text: "- <a href='https://github.com/kbumsik/VirtScreen'>Project Website</a>"
                 onLinkActivated: Qt.openUrlExternally(link)
             }
             Text {
+                font { pixelSize: 11 }
                 text: "- <a href='https://github.com/kbumsik/VirtScreen/issues'>Issues & Bug Report</a>"
                 onLinkActivated: Qt.openUrlExternally(link)
             }
             Text {
-                font { pointSize: 10 }
+                font { pixelSize: 10 }
                 anchors.horizontalCenter: parent.horizontalCenter
                 horizontalAlignment: Text.AlignHCenter
                 lineHeight: 0.7
@@ -177,7 +184,7 @@ ApplicationWindow {
                 onLinkActivated: Qt.openUrlExternally(link)
             }
             Text {
-                font { pointSize: 9 }
+                font { pixelSize: 9 }
                 anchors.horizontalCenter: parent.horizontalCenter
                 horizontalAlignment: Text.AlignHCenter
                 text: "This program comes with absolutely no warranty.<br/>" +
