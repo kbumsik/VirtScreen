@@ -395,7 +395,6 @@ class Backend(QObject):
 
     # Signals
     onVirtScreenCreatedChanged = pyqtSignal(bool)
-    onVirtScreenIndexChanged = pyqtSignal(int)
     onVncUsePasswordChanged = pyqtSignal(bool)
     onVncStateChanged = pyqtSignal(VNCState)
     onIPAddressesChanged = pyqtSignal()
@@ -411,7 +410,6 @@ class Backend(QObject):
         self._vncUsePassword: bool = False
         self._vncState: self.VNCState = self.VNCState.OFF
         # Primary screen and mouse posistion
-        self._primaryProp: DisplayProperty
         self.vncServer: ProcessProtocol
         # Check config file 
         # and initialize if needed
@@ -519,15 +517,6 @@ class Backend(QObject):
             for link in addresses:
                 if link is not None:
                     yield link['addr']
-
-    @pyqtProperty(DisplayProperty)
-    def primary(self):
-        try:
-            self._primaryProp = DisplayProperty(self.xrandr.get_primary_screen())
-        except RuntimeError as e:
-            self.onError.emit(str(e))
-            return
-        return self._primaryProp
 
     @pyqtProperty(int)
     def cursor_x(self):
