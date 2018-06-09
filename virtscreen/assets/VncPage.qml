@@ -3,8 +3,14 @@ import QtQuick.Controls 2.3
 import QtQuick.Layouts 1.3
 
 import VirtScreen.Backend 1.0
+import VirtScreen.Network 1.0
 
 ColumnLayout {
+    // virtscreen.py Network interfaces backend.
+    Network {
+        id: network
+    }
+
     GroupBox {
         title: "VNC Server"
         Layout.fillWidth: true
@@ -98,7 +104,7 @@ ColumnLayout {
                     anchors.bottom: ipListView.bottom
                     policy: ScrollBar.AlwaysOn
                 }
-                model: backend.ipAddresses
+                model: network.ipAddresses
                 delegate: TextEdit {
                     text: modelData
                     readOnly: true

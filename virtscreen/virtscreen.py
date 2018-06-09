@@ -416,7 +416,6 @@ class Backend(QObject):
     onVirtScreenCreatedChanged = pyqtSignal(bool)
     onVncUsePasswordChanged = pyqtSignal(bool)
     onVncStateChanged = pyqtSignal(VNCState)
-    onIPAddressesChanged = pyqtSignal()
     onDisplaySettingClosed = pyqtSignal()
     onError = pyqtSignal(str)
 
@@ -524,28 +523,6 @@ class Backend(QObject):
     def vncState(self, state):
         self._vncState = state
         self.onVncStateChanged.emit(self._vncState)
-
-    @pyqtProperty('QStringList', notify=onIPAddressesChanged)
-    def ipAddresses(self):
-        for interface in interfaces():
-            if interface == 'lo':
-                continue
-            addresses = ifaddresses(interface).get(AF_INET, None)
-            if addresses is None:
-                continue
-            for link in addresses:
-                if link is not None:
-                    yield link['addr']
-
-    @pyqtProperty(int)
-    def cursor_x(self):
-        cursor = QCursor().pos()
-        return cursor.x()
-
-    @pyqtProperty(int)
-    def cursor_y(self):
-        cursor = QCursor().pos()
-        return cursor.y()
 
     # Qt Slots
     @pyqtSlot(str, int, int, bool, bool)
@@ -707,6 +684,43 @@ class Backend(QObject):
         QApplication.instance().quit()
 
 
+class Cursor(QObject):
+    """ Global mouse cursor position """
+
+    def __init__(self, parent=None):
+        super(Cursor, self).__init__(parent)
+
+    @pyqtProperty(int)
+    def x(self):
+        cursor = QCursor().pos()
+        return cursor.x()
+
+    @pyqtProperty(int)
+    def y(self):
+        cursor = QCursor().pos()
+        return cursor.y()
+
+
+class Network(QObject):
+    """ Backend class for network interfaces """
+    onIPAddressesChanged = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(Network, self).__init__(parent)
+
+    @pyqtProperty('QStringList', notify=onIPAddressesChanged)
+    def ipAddresses(self):
+        for interface in interfaces():
+            if interface == 'lo':
+                continue
+            addresses = ifaddresses(interface).get(AF_INET, None)
+            if addresses is None:
+                continue
+            for link in addresses:
+                if link is not None:
+                    yield link['addr']
+                    
+
 # -------------------------------------------------------------------------------
 # Main Code
 # -------------------------------------------------------------------------------
@@ -800,6 +814,8 @@ def main_gui():
     # will be called 'Person' in QML.
     qmlRegisterType(DisplayProperty, 'VirtScreen.DisplayProperty', 1, 0, 'DisplayProperty')
     qmlRegisterType(Backend, 'VirtScreen.Backend', 1, 0, 'Backend')
+    qmlRegisterType(Cursor, 'VirtScreen.Cursor', 1, 0, 'Cursor')
+    qmlRegisterType(Network, 'VirtScreen.Network', 1, 0, 'Network')
 
     # Create a component factory and load the QML script.
     engine = QQmlApplicationEngine()

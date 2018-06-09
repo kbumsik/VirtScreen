@@ -4,6 +4,7 @@ import Qt.labs.platform 1.0
 
 import VirtScreen.DisplayProperty 1.0
 import VirtScreen.Backend 1.0
+import VirtScreen.Cursor 1.0
 
 Item {
     property alias window: mainLoader.item
@@ -61,6 +62,11 @@ Item {
         }
     }
 
+    // virtscreen.py Cursor class.
+    Cursor {
+        id: cursor
+    }
+
     // Timer object and function
     Timer {
         id: timer
@@ -109,8 +115,8 @@ Item {
                 }
             });
             // Move window to the corner of the primary display
-            var cursor_x = (backend.cursor_x / window.screen.devicePixelRatio) - window.screen.virtualX;
-            var cursor_y = (backend.cursor_y / window.screen.devicePixelRatio) - window.screen.virtualY;
+            var cursor_x = (cursor.x / window.screen.devicePixelRatio) - window.screen.virtualX;
+            var cursor_y = (cursor.y / window.screen.devicePixelRatio) - window.screen.virtualY;
             var x_mid = window.screen.width / 2;
             var y_mid = window.screen.height / 2;
             var x = window.screen.width - window.width; //(cursor_x > x_mid)? width - window.width : 0;
