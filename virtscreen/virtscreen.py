@@ -350,12 +350,6 @@ class XRandR(SubprocessWrapper):
             self.check_output(args_addmode)
         # After adding mode the program should delete the mode automatically on exit
         atexit.register(self.delete_virtual_screen)
-        for sig in [signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT]:
-            signal.signal(sig, self._signal_handler)
-
-    def _signal_handler(self, signum=None, frame=None) -> None:
-        self.delete_virtual_screen()
-        os._exit(0)
 
     def get_primary_screen(self) -> Display:
         self._update_screens()
@@ -758,6 +752,12 @@ def main() -> None:
         help='Portrait mode. Width and height of the screen are swapped')
     parser.add_argument('--hidpi', action='store_true',
         help='HiDPI mode. Width and height are doubled')
+    # Add signal handler
+    def on_exit(self, signum=None, frame=None):
+        sys.exit(0)
+    for sig in [signal.SIGINT, signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT]:
+        signal.signal(sig, on_exit)
+    # Start main
     args = parser.parse_args()
     if any(vars(args).values()):
         main_cli(args)
