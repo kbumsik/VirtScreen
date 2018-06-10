@@ -60,6 +60,10 @@ arch-install: arch-update
 	cd package/archlinux
 	makepkg -si
 
+arch-build: arch-update
+	cd package/archlinux
+	makepkg
+
 arch-upload: arch-update
 	cd package/archlinux
 	git clone ssh://aur@aur.archlinux.org/virtscreen.git
