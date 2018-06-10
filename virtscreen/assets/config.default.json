@@ -1,5 +1,5 @@
 {
-    "version": "0.2.0",
+    "version": "0.3.0",
     "x11vncVersion": "0.9.15",
     "theme_color": 8,
     "virt": {
@@ -30,6 +30,10 @@
             "enabled": true,
             "arg": null
         }
+    },
+    "customX11vncArgs": {
+        "enabled": false,
+        "value": ""
     },
     "presets": []
 }

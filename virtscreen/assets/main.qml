@@ -11,6 +11,11 @@ Item {
     property var settings: JSON.parse(backend.settings)
     property bool autostart: settings.vnc.autostart
 
+    function saveSettings () {
+        settings.vnc.autostart = autostart;
+        backend.settings = JSON.stringify(settings, null, 4);
+    }
+
     function createVirtScreen () {
         backend.createVirtScreen(settings.virt.device, settings.virt.width,
                                 settings.virt.height, settings.virt.portrait,
@@ -18,18 +23,8 @@ Item {
     }
 
     function startVNC () {
-        var options = '';
-        var data = settings.x11vncOptions; 
-        for (var key in data) {
-            if(data[key].available && data[key].enabled) {
-                options += key + ' ';
-                if(data[key].arg !== null) {
-                    options += data[key].arg.toString() + ' ';
-                }
-            }
-        }
-        console.log('options: ', options);
-        backend.startVNC(settings.vnc.port, options);
+        saveSettings();
+        backend.startVNC(settings.vnc.port);
     }
 
     function stopVNC () {
@@ -234,8 +229,7 @@ Item {
                 id: quitAction
                 text: qsTr("&Quit")
                 onTriggered: {
-                    settings.vnc.autostart = autostart;
-                    backend.settings = JSON.stringify(settings, null, 4);
+                    saveSettings();
                     backend.quitProgram();
                 }
             }

@@ -209,8 +209,7 @@ ApplicationWindow {
             TextField {
                 id: passwordFIeld
                 focus: true
-                anchors.left: parent.left
-                anchors.right: parent.right
+                Layout.fillWidth: true
                 placeholderText: "New Password";
                 echoMode: TextInput.Password;
             }

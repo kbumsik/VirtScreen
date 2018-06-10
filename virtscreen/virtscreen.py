@@ -457,7 +457,7 @@ class Backend(QObject):
                         value["available"] = True
                     else:
                         value["available"] = False
-                # 2. Default Display settings app for a Desktop Environment
+                # Default Display settings app for a Desktop Environment
                 desktop_environ = os.environ['XDG_CURRENT_DESKTOP'].lower()
                 for key, value in data['displaySettingApps'].items():
                     for de in value['XDG_CURRENT_DESKTOP']:
@@ -569,8 +569,8 @@ class Backend(QObject):
         else:
             self.onError.emit("Failed deleting the password file")
 
-    @pyqtSlot(int, str)
-    def startVNC(self, port, options=''):
+    @pyqtSlot(int)
+    def startVNC(self, port):
         # Check if a virtual screen created
         if not self.virtScreenCreated:
             self.onError.emit("Virtual Screen not crated.")
@@ -606,7 +606,19 @@ class Backend(QObject):
                 self.vncState = self.VNCState.OFF
             print("VNC Exited.")
             atexit.unregister(self.stopVNC)
-
+        # load settings
+        with open(CONFIG_PATH, 'r') as f:
+            config = json.load(f)
+        options = ''
+        if config['customX11vncArgs']['enabled']:
+            options = config['customX11vncArgs']['value']
+        else:
+            for key, value in config['x11vncOptions'].items():
+                if value['available'] and value['enabled']:
+                    options += key + ' '
+                    if value['arg'] is not None:
+                        options += str(value['arg']) + ' '
+        # Sart x11vnc, turn settings object into VNC arguments format
         logfile = open(X11VNC_LOG_PATH, "wb")
         self.vncServer = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, logfile)
         try:
@@ -856,13 +868,6 @@ def main_cli(args: argparse.Namespace):
         for key, value in tmp_args.items():
             if value:
                 position = key
-    # Turn settings object into VNC arguments format
-    vnc_option = ''
-    for key, value in config['x11vncOptions'].items():
-        if value['available'] and value['enabled']:
-            vnc_option += key + ' '
-            if value['arg'] is not None:
-                vnc_option += str(value['arg']) + ' '
     # Create virtscreen and Start VNC
     def handle_error(msg):
         print('Error: ', msg)
@@ -876,7 +881,7 @@ def main_cli(args: argparse.Namespace):
             sys.exit(0)
     backend.onVncStateChanged.connect(handle_vnc_changed)
     from twisted.internet import reactor  # pylint: disable=E0401
-    backend.startVNC(config['vnc']['port'], vnc_option)
+    backend.startVNC(config['vnc']['port'])
     reactor.run()
 
 if __name__ == '__main__':

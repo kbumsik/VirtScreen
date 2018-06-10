@@ -12,7 +12,7 @@ Dialog {
     x: (window.width - width) / 2
     y: (window.width - height) / 2 
     width: popupWidth
-    height: 300
+    height: 350
 
     Component.onCompleted: {
         var request = new XMLHttpRequest();
@@ -33,24 +33,44 @@ Dialog {
 
     ColumnLayout {
         anchors.fill: parent
-
-        Repeater {
-            id: vncOptionsRepeater
-            RowLayout {
-                enabled: modelData.available
-                Label {
-                    Layout.fillWidth: true
-                    text: modelData.description + ' (' + modelData.value + ')' 
+        RowLayout {
+            TextField {
+                id: vncCustomArgsTextField
+                enabled: vncCustomArgsCheckbox.checked
+                Layout.fillWidth: true
+                placeholderText: "Custom x11vnc arguments"
+                onTextEdited: {
+                    settings.customX11vncArgs.value = text;
                 }
-                Switch {
-                    checked: modelData.available ? modelData.enabled : false
-                    onCheckedChanged: {
-                        settings.x11vncOptions[modelData.value].enabled = checked;
+                text: vncCustomArgsCheckbox.checked ? settings.customX11vncArgs.value : ""
+            }
+            CheckBox {
+                id: vncCustomArgsCheckbox
+                checked: settings.customX11vncArgs.enabled
+                onToggled: {
+                    settings.customX11vncArgs.enabled = checked;
+                }
+            }
+        }
+        ColumnLayout {
+            enabled: !vncCustomArgsCheckbox.checked
+            Repeater {
+                id: vncOptionsRepeater
+                RowLayout {
+                    enabled: modelData.available
+                    Label {
+                        Layout.fillWidth: true
+                        text: modelData.description + ' (' + modelData.value + ')' 
+                    }
+                    Switch {
+                        checked: modelData.available ? modelData.enabled : false
+                        onCheckedChanged: {
+                            settings.x11vncOptions[modelData.value].enabled = checked;
+                        }
                     }
                 }
             }
         }
-
         RowLayout {
             // Empty layout
             Layout.fillHeight: true
