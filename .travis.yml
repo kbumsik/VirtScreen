@@ -1,24 +1,27 @@
 sudo: required
-
+language: python
+python: '3.6'
 services:
 - docker
-
 install:
-- if [[ -z "${TRAVIS_TAG}" ]]; then
 - make docker-pull
-- fi
-
+- pip3 install .
 script:
-- if [[ -z "${TRAVIS_TAG}" ]]; then
-- make docker-env-build
-- fi
-
+- package/update_version.sh $TRAVIS_TAG
 deploy:
-  provider: releases
-  api_key:
-    secure: zFbsCIKcsvWU/Yc+9k294Qj8QY48VlkV8DSScP5gz6dQegeUSaSHI/YafherkFQ0B03bIY8yc7roMtDo7HAkEnPptjFhdUiOFI11+xDVb3s7Y8Ek2nV3znQzdtR4CR/94l3in6R3DH+eNA6+6Je/NIWLdVcvRX07RBSfBVdPmnsAyAD9KNTsl8Q4c20HgtLNxfWv2s5eCyD+heCTLYrErEZKZ5vYeeANmWomHvT2ED/4QerpBP8wkh59QXD1S79CF7oyq6X173ZJUQVxdBP+OSXt/mDBAoqf+TV6okawRZn48JluvCWAJ7BceX7t9emd1rVI/s8t3wCP+eMcmNn5g/6UJaCPnTJ5YplTuUWRc63UFSkE0AY8WYcRlrz+/OiXYgQ8LMXfN23aWgarHCbS2vHR3Afu9gpLCoKucr36hKhs3zfjJzVLFFW16mnbaTFcBzfDDRpkvOANB1aZwGVRFpTIWIMjkn0+lxWTC/moIJvQlfRPsC4dN5cDAilRQlguHzayebtGE8X0PuIe9A8bkET3V/y+KPnQiSJ7J+5PNoDSdqRAE4IKvVOLEyHtlqBVkvIHKnugUnWPIZ21gm5RemMEj9/YGa8Efwz7PIKtJJ3kFMGDYKVlIKyB+rg/TFWNdo6jjevnWM6y4SfVI3kFyjA+mp31o6nshrQy0zVQpd8=
-  file:
-    - package/debian/build/virtscreen_0.2.0-1_all.deb
-  on:
-    tags: true
-    repo: kbumsik/VirtScreen
+  - provider: releases
+    api_key:
+      secure: zFbsCIKcsvWU/Yc+9k294Qj8QY48VlkV8DSScP5gz6dQegeUSaSHI/YafherkFQ0B03bIY8yc7roMtDo7HAkEnPptjFhdUiOFI11+xDVb3s7Y8Ek2nV3znQzdtR4CR/94l3in6R3DH+eNA6+6Je/NIWLdVcvRX07RBSfBVdPmnsAyAD9KNTsl8Q4c20HgtLNxfWv2s5eCyD+heCTLYrErEZKZ5vYeeANmWomHvT2ED/4QerpBP8wkh59QXD1S79CF7oyq6X173ZJUQVxdBP+OSXt/mDBAoqf+TV6okawRZn48JluvCWAJ7BceX7t9emd1rVI/s8t3wCP+eMcmNn5g/6UJaCPnTJ5YplTuUWRc63UFSkE0AY8WYcRlrz+/OiXYgQ8LMXfN23aWgarHCbS2vHR3Afu9gpLCoKucr36hKhs3zfjJzVLFFW16mnbaTFcBzfDDRpkvOANB1aZwGVRFpTIWIMjkn0+lxWTC/moIJvQlfRPsC4dN5cDAilRQlguHzayebtGE8X0PuIe9A8bkET3V/y+KPnQiSJ7J+5PNoDSdqRAE4IKvVOLEyHtlqBVkvIHKnugUnWPIZ21gm5RemMEj9/YGa8Efwz7PIKtJJ3kFMGDYKVlIKyB+rg/TFWNdo6jjevnWM6y4SfVI3kFyjA+mp31o6nshrQy0zVQpd8=
+    file:
+      - "package/debian/build/virtscreen_$TRAVIS_TAG-1_all.deb"
+    on:
+      tags: true
+      repo: kbumsik/VirtScreen
+  - provider: pypi
+    user: kbumsik
+    password:
+      secure: d7ozcWf9/j2mpyYX60o7yo/0dPnTkA/1FxPm6GV3bst264z1NVh4G4+J0o/jIpLKA9lEd5QbBUgnLnNIBGGBeEghYCeof/yZnekCntYd75tIAiaIkwBzaYu3n5wfxpEVUIDngTh+biH4EU4iq+Kxrg/KxMi+MetFWL6EVJgtIUarjr2wkBYmKAOEkNvyXWkIEJqUn0xuQSGmqGyNxRjoAPv+6i9QR7KnTCaEPOrEzwKyxhzOL33acBrmaymRFC7EznmaTIHMzGqBcaj3rljC6Kk5bnepSzncNTT8C4v8MuJZPF+oYPN5n16Xy4odAJlt1+pWsuAbhB6Gk/l5Z0zoKjIIuH2LkMWkm2MDO3qbmuu9qfEWg1Y+MmbhnVQf+1qRO7i0vMt9WP5X6IDPkBeXYibUiFZVwYY2AmBchRCD7XvIL1+0JEGQadtAR8EJWNPKCpRgl3p9WTyMVtGgob/UEzknRJWDAYk4u3R4yiMw+shqdc/osRyjoadVQZFZs/80QqLTBUFkR3XlBfNmyywtu3ux9PNnCEgoPO28K6EWj70UaujN87ByjFQ1b4n+wuWwFkp5PTJYLSHgXI8oR29VB9xk4mmKNU4MnAApokgbs4Gqb3jY6KHm5t/MIMqYcrOrqT8OYqwpvfie1FMLXvvtowcgVnUup7vOAaq9mafZpJI=
+    distributions: "bdist_wheel"
+    on:
+      tags: true
+      repo: kbumsik/VirtScreen
