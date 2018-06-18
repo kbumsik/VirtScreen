@@ -1,5 +1,5 @@
 # Or bionic
-FROM ubuntu:latest
+FROM ubuntu:bionic
 LABEL author="Bumsik Kim <k.bumsik@gmail.com>"
 
 WORKDIR /app

@@ -1,6 +1,8 @@
 # See https://packaging.python.org/tutorials/distributing-packages/#packaging-your-project
 # for python packaging reference.
 
+DOCKER_NAME=kbumsik/virtscreen
+
 .PHONY:
 
 python-wheel:
@@ -20,32 +22,40 @@ pip-upload: python-wheel
 
 .ONESHELL:
 
-# For Debian packaging, https://www.debian.org/doc/manuals/debmake-doc/ch08.en.html#setup-py
-deb-docker-build:
-	docker build -f package/debian/Dockerfile -t debmake .
+# Docker
+docker-build:
+	docker build -f Dockerfile -t $(DOCKER_NAME) .
 
-deb-docker:
-	docker run --privileged --interactive --tty -v $(shell pwd)/package/debian:/app debmake /bin/bash
+docker:
+	docker run --interactive --tty -v $(shell pwd)/package/debian:/app $(DOCKER_NAME) /bin/bash
 	
-deb-docker-rm:
-	docker image rm -f debmake
+docker-rm:
+	docker image rm -f $(DOCKER_NAME)
 
+docker-pull:
+	docker pull $(DOCKER_NAME)
+
+docker-push:
+	docker login
+	docker push $(DOCKER_NAME)
+
+# For Debian packaging, https://www.debian.org/doc/manuals/debmake-doc/ch08.en.html#setup-py
 deb-make:
-	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/debmake.sh
+	docker run -v $(shell pwd)/package/debian:/app $(DOCKER_NAME) /app/debmake.sh
 
 deb-build: deb-clean deb-make
 	package/debian/copy_debian.sh
-	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/debuild.sh
+	docker run -v $(shell pwd)/package/debian:/app $(DOCKER_NAME) /app/debuild.sh
 
 deb-contents:
-	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/contents.sh
+	docker run -v $(shell pwd)/package/debian:/app $(DOCKER_NAME) /app/contents.sh
 
 deb-env-make:
-	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/debmake.sh virtualenv
+	docker run -v $(shell pwd)/package/debian:/app $(DOCKER_NAME) /app/debmake.sh virtualenv
 
 deb-env-build: deb-clean deb-env-make
 	package/debian/copy_debian.sh virtualenv
-	docker run --privileged --interactive --tty --rm -v $(shell pwd)/package/debian:/app debmake /app/debuild.sh virtualenv
+	docker run -v $(shell pwd)/package/debian:/app $(DOCKER_NAME) /app/debuild.sh virtualenv
 
 deb-clean:
 	rm -rf package/debian/build

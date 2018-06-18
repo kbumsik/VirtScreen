@@ -7,7 +7,6 @@ SHELL = /bin/bash
 install:
 	# Create virtualenv
 	install -d $(DESTDIR)$(prefix)/share/virtscreen
-	virtualenv $(DESTDIR)$(prefix)/share/virtscreen/env --always-copy
 	source $(HOME)/miniconda/bin/activate && \
 		conda create -y --copy --prefix $(DESTDIR)$(prefix)/share/virtscreen/env python=3.6
 	source $(HOME)/miniconda/bin/activate && \

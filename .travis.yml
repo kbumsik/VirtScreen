@@ -1,0 +1,24 @@
+sudo: required
+
+services:
+- docker
+
+install:
+- if [[ -z "${TRAVIS_TAG}" ]]; then
+- make docker-pull
+- fi
+
+script:
+- if [[ -z "${TRAVIS_TAG}" ]]; then
+- make docker-env-build
+- fi
+
+deploy:
+  provider: releases
+  api_key:
+    secure: zFbsCIKcsvWU/Yc+9k294Qj8QY48VlkV8DSScP5gz6dQegeUSaSHI/YafherkFQ0B03bIY8yc7roMtDo7HAkEnPptjFhdUiOFI11+xDVb3s7Y8Ek2nV3znQzdtR4CR/94l3in6R3DH+eNA6+6Je/NIWLdVcvRX07RBSfBVdPmnsAyAD9KNTsl8Q4c20HgtLNxfWv2s5eCyD+heCTLYrErEZKZ5vYeeANmWomHvT2ED/4QerpBP8wkh59QXD1S79CF7oyq6X173ZJUQVxdBP+OSXt/mDBAoqf+TV6okawRZn48JluvCWAJ7BceX7t9emd1rVI/s8t3wCP+eMcmNn5g/6UJaCPnTJ5YplTuUWRc63UFSkE0AY8WYcRlrz+/OiXYgQ8LMXfN23aWgarHCbS2vHR3Afu9gpLCoKucr36hKhs3zfjJzVLFFW16mnbaTFcBzfDDRpkvOANB1aZwGVRFpTIWIMjkn0+lxWTC/moIJvQlfRPsC4dN5cDAilRQlguHzayebtGE8X0PuIe9A8bkET3V/y+KPnQiSJ7J+5PNoDSdqRAE4IKvVOLEyHtlqBVkvIHKnugUnWPIZ21gm5RemMEj9/YGa8Efwz7PIKtJJ3kFMGDYKVlIKyB+rg/TFWNdo6jjevnWM6y4SfVI3kFyjA+mp31o6nshrQy0zVQpd8=
+  file:
+    - package/debian/build/virtscreen_0.2.0-1_all.deb
+  on:
+    tags: true
+    repo: kbumsik/VirtScreen
