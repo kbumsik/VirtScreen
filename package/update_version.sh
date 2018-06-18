@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/bin/bash
 
 # Get parameters. Just return 0 if no parameter passed
 if [ -n "$1" ]; then
@@ -44,9 +44,10 @@ build_arch () {
 
 build_debian () {
     make -C $ROOT deb-env-build
+    make -C $ROOT deb-chown
 }
 
 override_version
-build_pypi
-build_arch
+# build_pypi
+# build_arch
 build_debian
