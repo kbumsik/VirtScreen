@@ -16,6 +16,7 @@ pkgbase = virtscreen
 	optdepends = arandr: for display settings option
 	provides = virtscreen
 	source = https://github.com/kbumsik/VirtScreen/archive/0.2.1.tar.gz
+	sha256sums = 9af568a73ff3523144bfbeacb7131d4fff9fc4fb8ee3fddb90d78f54b774acb7
 
 pkgname = virtscreen
 

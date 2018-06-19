@@ -39,7 +39,7 @@ build_arch () {
     perl -pi -e "s/sha256sums=\('.*'\)/sha256sums=('$SHA256')/" \
     		$ROOT/package/archlinux/PKGBUILD
     rm $VERSION.tar.gz
-    make -C $ROOT arch-update
+    make -C $ROOT arch-upload
 }
 
 build_debian () {
@@ -47,7 +47,7 @@ build_debian () {
     make -C $ROOT deb-chown
 }
 
-override_version
+# override_version
 # build_pypi
-# build_arch
-build_debian
+build_arch
+# build_debian

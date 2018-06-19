@@ -22,7 +22,7 @@ install=
 changelog=
 source=(https://github.com/kbumsik/$_pkgname_camelcase/archive/$pkgver.tar.gz)
 noextract=()
-sha256sums=('')
+sha256sums=('9af568a73ff3523144bfbeacb7131d4fff9fc4fb8ee3fddb90d78f54b774acb7')
 
 package() {
   cd $_pkgname_camelcase-$pkgver
