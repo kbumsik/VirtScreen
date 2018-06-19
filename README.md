@@ -29,9 +29,9 @@ $ virtscreen
 ```bash
 sudo apt-get update
 sudo apt-get install x11vnc qtbase5-dev
-wget https://github.com/kbumsik/VirtScreen/releases/download/0.2.0/virtscreen_0.2.0-1_all.deb
-sudo dpkg -i virtscreen_0.2.0-1_all.deb 
-rm virtscreen_0.2.0-1_all.deb
+wget https://github.com/kbumsik/VirtScreen/releases/download/0.2.1/virtscreen_0.2.1-1_all.deb
+sudo dpkg -i virtscreen_0.2.1-1_all.deb 
+rm virtscreen_0.2.1-1_all.deb
 ```
 
 ### Arch Linux (AUR)
