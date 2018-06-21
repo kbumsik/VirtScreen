@@ -95,7 +95,4 @@ arch-clean:
 	cd package/archlinux
 	rm -rf pkg src *.tar*
 
-launch:
-	./launch.sh
-
 clean: arch-clean deb-clean python-clean

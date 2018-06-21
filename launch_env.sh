@@ -1,0 +1,13 @@
+#!/bin/sh
+# This script is only for isolated miniconda environment
+#   Used in Debian & AppImage package
+ENV=/usr/share/virtscreen/env
+
+export PYTHONPATH=$ENV/lib/python3.6
+export LD_LIBRARY_PATH=$ENV/lib
+export QT_PLUGIN_PATH=$ENV/lib/python3.6/site-packages/PyQt5/Qt/plugins
+export QML2_IMPORT_PATH=$ENV/lib/python3.6/site-packages/PyQt5/Qt/qml
+# export QT_QPA_FONTDIR=/usr/share/fonts
+# export QT_XKB_CONFIG_ROOT=/usr/share/X11/xkb
+
+$ENV/bin/python3 $ENV/bin/virtscreen

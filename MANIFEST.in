@@ -6,4 +6,4 @@ include LICENSE.txt
 
 # Include data directories
 include data/virtscreen.png
-include data/virtscreen.desktop
+include virtscreen.desktop

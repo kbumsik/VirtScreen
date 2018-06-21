@@ -3,11 +3,17 @@ language: python
 python: '3.6'
 services:
 - docker
+
 install:
 - make docker-pull
 - pip3 install .
+
 script:
+- echo No test scripts implemented yet. Travis is used only for deploy yet.
+
+before_deploy:
 - package/update_version.sh $TRAVIS_TAG
+
 deploy:
   - provider: releases
     api_key:

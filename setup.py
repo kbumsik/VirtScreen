@@ -147,7 +147,8 @@ setup(
     install_requires=['PyQt5>=5.10.1',
                       'Twisted>=17.9.0',
                       'qt5reactor>=0.5',
-                      'netifaces>=0.10.6'],  # Optional
+                      'netifaces>=0.10.6',
+                      'PyOpenGL>=3.1.0'],  # Optional
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
@@ -180,7 +181,7 @@ setup(
     data_files=[
         # Desktop entries spec:
         # https://www.freedesktop.org/wiki/Specifications/desktop-entry-spec/
-        ('share/applications', ['data/virtscreen.desktop']),
+        ('share/applications', ['virtscreen.desktop']),
         # $XDG_DATA_DIRS/icons
         # https://standards.freedesktop.org/icon-theme-spec/icon-theme-spec-latest.html#directory_layout
         ('share/icons', ['data/virtscreen.png']),
