@@ -47,7 +47,7 @@ build_debian () {
     make -C $ROOT deb-chown
 }
 
-# override_version
+override_version
 # build_pypi
 build_arch
-# build_debian
+build_debian
