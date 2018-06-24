@@ -14,6 +14,13 @@ import argparse
 from pathlib import Path
 from enum import Enum
 from typing import List, Dict, Callable
+
+# Import OpenGL library for Nvidia driver
+# https://github.com/Ultimaker/Cura/pull/131#issuecomment-176088664
+import ctypes
+from ctypes.util import find_library
+ctypes.CDLL(find_library('GL'), ctypes.RTLD_GLOBAL)
+
 # PyQt5 packages
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QObject, QUrl, Qt, pyqtProperty, pyqtSlot, pyqtSignal, Q_ENUMS
@@ -22,7 +29,6 @@ from PyQt5.QtQml import qmlRegisterType, QQmlApplicationEngine, QQmlListProperty
 # Twisted and netifaces
 from twisted.internet import protocol, error
 from netifaces import interfaces, ifaddresses, AF_INET
-
 
 # -------------------------------------------------------------------------------
 # file path definitions

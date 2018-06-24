@@ -9,6 +9,7 @@ install:
 	install -d $(DESTDIR)$(prefix)/share/virtscreen
 	source $(HOME)/miniconda/bin/activate && \
 		conda create -y --copy --prefix $(DESTDIR)$(prefix)/share/virtscreen/env python=3.6
+	# Install VirtScreen using pip
 	source $(HOME)/miniconda/bin/activate && \
 		source activate $(DESTDIR)$(prefix)/share/virtscreen/env && \
 		pip install .
