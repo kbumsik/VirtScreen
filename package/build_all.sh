@@ -32,6 +32,10 @@ build_pypi () {
     make -C $ROOT python-wheel
 }
 
+build_appimage () {
+    make -C $ROOT appimage-build
+}
+
 build_arch () {
     wget -q https://github.com/kbumsik/VirtScreen/archive/$VERSION.tar.gz
     SHA256=$(sha256sum $VERSION.tar.gz | cut -d' ' -f1)
@@ -49,5 +53,6 @@ build_debian () {
 
 override_version
 # build_pypi
-build_arch
+build_appimage
+# build_arch
 build_debian
