@@ -147,8 +147,7 @@ setup(
     install_requires=['PyQt5>=5.10.1',
                       'Twisted>=17.9.0',
                       'qt5reactor>=0.5',
-                      'netifaces>=0.10.6',
-                      'PyOpenGL>=3.1.0'],  # Optional
+                      'netifaces>=0.10.6'],  # Optional
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
