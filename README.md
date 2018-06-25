@@ -22,16 +22,25 @@ $ virtscreen
 
 ## Installation
 
+### Universal package (AppImage)
+
+Download a `.AppImage` package from [releases page](https://github.com/kbumsik/VirtScreen/releases). Then make it executable:
+
+```shell
+chmod a+x VirtScreen-x86_64.AppImage
+```
+
+Then you can run it by double click the file or `./VirtScreen-x86_64.AppImage` in terminal.
+
 ### Debian (Ubuntu)
 
-#### `.deb` package
+Download a `.deb` package from [releases page](https://github.com/kbumsik/VirtScreen/releases). Then install it:
 
-```bash
+```shell
 sudo apt-get update
-sudo apt-get install x11vnc qtbase5-dev
-wget https://github.com/kbumsik/VirtScreen/releases/download/0.2.1/virtscreen_0.2.1-1_all.deb
-sudo dpkg -i virtscreen_0.2.1-1_all.deb 
-rm virtscreen_0.2.1-1_all.deb
+sudo apt-get install x11vnc
+sudo dpkg -i virtscreen_0.2.4-1_all.deb 
+rm virtscreen_0.2.4-1_all.deb
 ```
 
 ### Arch Linux (AUR)
@@ -44,7 +53,7 @@ yaourt virtscreen
 
 ### Python `pip`
 
-If your distro is none of above, you may install it using `pip`. In this case, you need to install the dependancies manually.
+Although not recommended, you may install it using `pip`. In this case, you need to install the dependancies manually.
 
 You need [`x11vnc`](https://github.com/LibVNC/x11vnc), `xrandr`. To install (e.g. on Ubuntu):
 ```bash
