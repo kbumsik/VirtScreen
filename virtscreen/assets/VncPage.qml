@@ -33,8 +33,6 @@ ColumnLayout {
                 }
             }
             RowLayout {
-                anchors.left: parent.left
-                anchors.right: parent.right
                 Label { text: "Password"; Layout.fillWidth: true }
                 Button {
                     text: "Delete"
@@ -90,28 +88,26 @@ ColumnLayout {
     GroupBox {
         title: "Available IP addresses"
         Layout.fillWidth: true
+        Layout.fillHeight: true
         implicitHeight: 145
-        ColumnLayout {
+        ListView {
+            id: ipListView
             anchors.fill: parent
-            ListView {
-                id: ipListView
-                anchors.fill: parent
-                clip: true
-                ScrollBar.vertical: ScrollBar {
-                    parent: ipListView.parent
-                    anchors.top: ipListView.top
-                    anchors.right: ipListView.right
-                    anchors.bottom: ipListView.bottom
-                    policy: ScrollBar.AlwaysOn
-                }
-                model: network.ipAddresses
-                delegate: TextEdit {
-                    text: modelData
-                    readOnly: true
-                    selectByMouse: true
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    font.pixelSize: 14
-                }
+            clip: true
+            ScrollBar.vertical: ScrollBar {
+                parent: ipListView.parent
+                anchors.top: ipListView.top
+                anchors.right: ipListView.right
+                anchors.bottom: ipListView.bottom
+                policy: ScrollBar.AlwaysOn
+            }
+            model: network.ipAddresses
+            delegate: TextEdit {
+                text: modelData
+                readOnly: true
+                selectByMouse: true
+                anchors.horizontalCenter: parent.horizontalCenter
+                font.pixelSize: 14
             }
         }
     }

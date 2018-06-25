@@ -64,7 +64,7 @@ ApplicationWindow {
 
             ToolButton {
                 id: menuButton
-                anchors.right: parent.right
+                Layout.alignment: Qt.AlignRight
                 text: qsTr("⋮")
                 contentItem: Text {
                     text: parent.text
@@ -154,13 +154,13 @@ ApplicationWindow {
         ColumnLayout {
             anchors.fill: parent
             Text {
-                anchors.horizontalCenter: parent.horizontalCenter
+                Layout.alignment: Qt.AlignHCenter
                 horizontalAlignment: Text.AlignHCenter
                 font { weight: Font.Bold; pixelSize: 20 }
                 text: "VirtScreen" + " v" + settings.version
             }
             Text {
-                anchors.horizontalCenter: parent.horizontalCenter
+                Layout.alignment: Qt.AlignHCenter
                 horizontalAlignment: Text.AlignHCenter
                 font { pixelSize: 13 }
                 text: "Make your iPad/tablet/computer<br/>as a secondary monitor.<br/>"
@@ -177,7 +177,7 @@ ApplicationWindow {
             }
             Text {
                 font { pixelSize: 14 }
-                anchors.horizontalCenter: parent.horizontalCenter
+                Layout.alignment: Qt.AlignHCenter
                 horizontalAlignment: Text.AlignHCenter
                 lineHeight: 0.7
                 text: "<br/>Copyright © 2018 Bumsik Kim  <a href='https://kbumsik.io/'>Homepage</a><br/>"
@@ -185,7 +185,7 @@ ApplicationWindow {
             }
             Text {
                 font { pixelSize: 11 }
-                anchors.horizontalCenter: parent.horizontalCenter
+                Layout.alignment: Qt.AlignHCenter
                 horizontalAlignment: Text.AlignHCenter
                 text: "This program comes with absolutely no warranty.<br/>" +
                       "See the <a href='https://github.com/kbumsik/VirtScreen/blob/master/LICENSE'>" +
@@ -240,7 +240,8 @@ ApplicationWindow {
         ColumnLayout {
             anchors.fill: parent
             ScrollView {
-                anchors.fill: parent
+                Layout.fillHeight: true
+                Layout.fillWidth: true
                 TextArea {
                     // readOnly: true
                     selectByMouse: true
