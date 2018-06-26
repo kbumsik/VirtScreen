@@ -8,16 +8,61 @@ VirtScreen is an easy-to-use Linux GUI app that creates a virtual secondary scre
 
 VirtScreen is based on [PyQt5](https://www.riverbankcomputing.com/software/pyqt/intro) and [Twisted](https://twistedmatrix.com) in Python side and uses [x11vnc](https://github.com/LibVNC/x11vnc) and XRandR.
 
+## Features
+
+* No more typing commands - create a second VNC screen with a few clicks from the GUI.
+* ...But there is also command-line only options for CLI lovers.
+* Highly configurable - resolutions, portrait mode, and HiDPI mode.
+* Works on any Linux Distro with Xorg
+* Lightweight
+* System Tray Icon
+
 ## How to use
+
+### GUI (default)
 
 Upon installation (see Installing section to install), there will be a desktop entry called `VirtScreen`
 
 ![desktop entry](https://raw.githubusercontent.com/kbumsik/VirtScreen/master/data/desktop_entry.png)
 
-Or you can run it using a command line:
+### CLI-only option
+
+You can run VirtScreen with `virtscreen` (or `./VirtScreen-x86_64.AppImage` if you use the AppImage package) with additional arguments.
 
 ```bash
-$ virtscreen
+usage: virtscreen [-h] [--auto] [--left] [--right] [--above] [--below]
+                  [--portrait] [--hidpi]
+
+Make your iPad/tablet/computer as a secondary monitor on Linux.
+
+You can start VirtScreen in the following two modes:
+
+ - GUI mode: A system tray icon will appear when no argument passed.
+          You need to use this first to configure a virtual screen.
+ - CLI mode: After configured the virtual screen, you can start VirtScreen
+          in CLI mode if you do not want a GUI, by passing any arguments
+
+optional arguments:
+  -h, --help       show this help message and exit
+  --auto           create a virtual screen automatically using previous
+                   settings (from both GUI mode and CLI mode)
+  --left           a virtual screen will be created left to the primary
+                   monitor
+  --right          right to the primary monitor
+  --above, --up    above the primary monitor
+  --below, --down  below the primary monitor
+  --portrait       Portrait mode. Width and height of the screen are swapped
+  --hidpi          HiDPI mode. Width and height are doubled
+
+example:
+virtscreen  # GUI mode. You need to use this first
+            # to configure the screen
+virtscreen --auto       # CLI mode. Scrren will be created using previous
+                        #   settings (from both GUI mode and CLI mode)
+virtscreen --left    # CLI mode. On the left to the primary monitor
+virtscreen --below   # CLI mode. Below the primary monitor.
+virtscreen --below --portrait           # Below, and portrait mode.
+virtscreen --below --portrait  --hipdi  # Below, portrait, HiDPI mode.
 ```
 
 ## Installation
