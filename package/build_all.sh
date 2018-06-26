@@ -29,11 +29,11 @@ override_version () {
 }
 
 build_pypi () {
-    make -C $ROOT python-wheel
+    make -C $ROOT package/pypi/virtscreen-$VERSION-py2.py3-none-any.whl
 }
 
 build_appimage () {
-    make -C $ROOT appimage-build
+    make -C $ROOT package/appimage/VirtScreen-x86_64.AppImage
 }
 
 build_arch () {
@@ -43,16 +43,15 @@ build_arch () {
     perl -pi -e "s/sha256sums=\('.*'\)/sha256sums=('$SHA256')/" \
     		$ROOT/package/archlinux/PKGBUILD
     rm $VERSION.tar.gz
-    make -C $ROOT arch-upload
+    # make -C $ROOT arch-upload
 }
 
 build_debian () {
-    make -C $ROOT deb-env-build
-    make -C $ROOT deb-chown
+    make -C $ROOT package/debian/virtscreen_$VERSION-1_all.deb
 }
 
 override_version
-# build_pypi
+build_pypi
 build_appimage
-# build_arch
+build_arch
 build_debian
