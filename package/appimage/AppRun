@@ -4,7 +4,6 @@
 SCRIPTDIR=$(dirname $0)
 ENV=$SCRIPTDIR/usr/share/virtscreen/env
 
-echo $SCRIPTDIR
 export PYTHONPATH=$ENV/lib/python3.6
 export LD_LIBRARY_PATH=$ENV/lib
 export QT_PLUGIN_PATH=$ENV/lib/python3.6/site-packages/PyQt5/Qt/plugins

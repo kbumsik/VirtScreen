@@ -30,6 +30,7 @@ wheel-clean:
 
 # For AppImage packaging, https://github.com/AppImage/AppImageKit/wiki/Creating-AppImages
 .PHONY: appimage-clean
+.SECONDARY: package/appimage/VirtScreen-x86_64.AppImage
 
 package/appimage/%.AppImage:
 	$(DOCKER_RUN) package/appimage/build.sh
@@ -38,21 +39,20 @@ package/appimage/%.AppImage:
 appimage-clean:
 	-rm -rf package/appimage/virtscreen.AppDir package/appimage/VirtScreen-x86_64.AppImage
 
-# For Debian packaging, https://www.debian.org/doc/manuals/debmake-doc/ch08.en.html#setup-py
+# For Debian packaging, https://www.debian.org/doc/manuals/maint-guide/index.en.html 
+#	https://www.debian.org/doc/manuals/debmake-doc/ch08.en.html#setup-py
 .PHONY: deb-contents deb-clean
 
-package/debian/%.deb:
-	$(DOCKER_RUN) package/debian/debmake.sh
-	$(DOCKER_RUN) package/debian/copy_debian.sh
-	$(DOCKER_RUN) package/debian/debuild.sh
-	$(DOCKER_RUN) chown -R $(shell id -u):$(shell id -u) package/debian/build
-	cp package/debian/build/virtscreen*.deb package/debian
+package/debian/%.deb: package/appimage/VirtScreen-x86_64.AppImage
+	$(DOCKER_RUN) package/debian/build.sh
+	$(DOCKER_RUN) chown -R $(shell id -u):$(shell id -u) package/debian
 
 deb-contents:
 	$(DOCKER_RUN) dpkg -c package/debian/*.deb
 
 deb-clean:
-	rm -rf package/debian/build package/debian/*.deb
+	rm -rf package/debian/build package/debian/*.deb package/debian/*.buildinfo \
+		package/debian/*.changes
 
 # For AUR: https://wiki.archlinux.org/index.php/Python_package_guidelines
 #  and: https://wiki.archlinux.org/index.php/Creating_packages
@@ -95,7 +95,7 @@ override-version:
 			package/archlinux/PKGBUILD
 	# Debian
 	perl -pi -e "s/PKGVER=\d+\.\d+\.\d+/PKGVER=$(VERSION)/" \
-			package/debian/_common.sh
+			package/debian/build.sh
 
 # Clean packages
 clean: appimage-clean arch-clean deb-clean wheel-clean
