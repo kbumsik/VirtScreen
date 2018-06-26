@@ -5,7 +5,6 @@ VERSION ?= 0.2.4
 DOCKER_NAME=kbumsik/virtscreen
 DOCKER_RUN=docker run --interactive --tty -v $(shell pwd):/app $(DOCKER_NAME)
 DOCKER_RUN_TTY=docker run --interactive --tty -v $(shell pwd):/app $(DOCKER_NAME)
-DOCKER_RUN_DEB=docker run -v $(shell pwd)/package/debian:/app $(DOCKER_NAME)
 
 .ONESHELL:
 
@@ -43,14 +42,14 @@ appimage-clean:
 .PHONY: deb-contents deb-clean
 
 package/debian/%.deb:
-	$(DOCKER_RUN_DEB) /app/debmake.sh virtualenv
-	$(DOCKER_RUN_DEB) /app/copy_debian.sh virtualenv
-	$(DOCKER_RUN_DEB) /app/debuild.sh virtualenv
-	$(DOCKER_RUN_DEB) chown -R $(shell id -u):$(shell id -u) /app/build
+	$(DOCKER_RUN) package/debian/debmake.sh
+	$(DOCKER_RUN) package/debian/copy_debian.sh
+	$(DOCKER_RUN) package/debian/debuild.sh
+	$(DOCKER_RUN) chown -R $(shell id -u):$(shell id -u) package/debian/build
 	cp package/debian/build/virtscreen*.deb package/debian
 
 deb-contents:
-	$(DOCKER_RUN_DEB) /app/contents.sh
+	$(DOCKER_RUN) dpkg -c package/debian/*.deb
 
 deb-clean:
 	rm -rf package/debian/build package/debian/*.deb

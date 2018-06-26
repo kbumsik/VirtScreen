@@ -1,11 +1,7 @@
 #!/bin/bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source $DIR/_common.sh
 
-source _common.sh
-
-cd build
+cd package/debian/build
 cd virtscreen-$PKGVER
-if [ $1 = "virtualenv" ]; then
-    dpkg-buildpackage -b
-else
-    debuild
-fi
+dpkg-buildpackage -b
