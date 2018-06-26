@@ -36,16 +36,6 @@ build_appimage () {
     make -C $ROOT package/appimage/VirtScreen-x86_64.AppImage
 }
 
-build_arch () {
-    wget -q https://github.com/kbumsik/VirtScreen/archive/$VERSION.tar.gz
-    SHA256=$(sha256sum $VERSION.tar.gz | cut -d' ' -f1)
-    # Arch AUR
-    perl -pi -e "s/sha256sums=\('.*'\)/sha256sums=('$SHA256')/" \
-    		$ROOT/package/archlinux/PKGBUILD
-    rm $VERSION.tar.gz
-    # make -C $ROOT arch-upload
-}
-
 build_debian () {
     make -C $ROOT package/debian/virtscreen_$VERSION-1_all.deb
 }
@@ -53,5 +43,4 @@ build_debian () {
 override_version
 build_pypi
 build_appimage
-build_arch
 build_debian
