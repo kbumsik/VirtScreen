@@ -1,5 +1,6 @@
 # See https://packaging.python.org/tutorials/distributing-packages/#packaging-your-project
 # for python packaging reference.
+VERSION ?= 0.2.4
 
 DOCKER_NAME=kbumsik/virtscreen
 DOCKER_RUN=docker run --interactive --tty -v $(shell pwd):/app $(DOCKER_NAME)
@@ -77,6 +78,25 @@ package/archlinux/.SRCINFO:
 arch-clean:
 	cd package/archlinux
 	-rm -rf pkg src *.tar* .SRCINFO
+
+# Override version
+.PHONY: override-version
+
+override-version:
+	# Update python setup.py
+	perl -pi -e "s/version=\'\d+\.\d+\.\d+\'/version=\'$(VERSION)\'/" \
+			setup.py
+	# Update .json files in the module
+	perl -pi -e "s/\"version\"\s*\:\s*\"\d+\.\d+\.\d+\"/\"version\"\: \"$(VERSION)\"/" \
+			virtscreen/assets/data.json
+	perl -pi -e "s/\"version\"\s*\:\s*\"\d+\.\d+\.\d+\"/\"version\"\: \"$(VERSION)\"/" \
+			virtscreen/assets/config.default.json
+	# Arch AUR
+	perl -pi -e "s/pkgver=\d+\.\d+\.\d+/pkgver=$(VERSION)/" \
+			package/archlinux/PKGBUILD
+	# Debian
+	perl -pi -e "s/PKGVER=\d+\.\d+\.\d+/PKGVER=$(VERSION)/" \
+			package/debian/_common.sh
 
 # Clean packages
 clean: appimage-clean arch-clean deb-clean wheel-clean
