@@ -11,9 +11,11 @@ import time
 import json
 import shutil
 import argparse
+import shlex
 from pathlib import Path
 from enum import Enum
 from typing import List, Dict, Callable
+import asyncio
 
 # Import OpenGL library for Nvidia driver
 # https://github.com/Ultimaker/Cura/pull/131#issuecomment-176088664
@@ -26,8 +28,7 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QObject, QUrl, Qt, pyqtProperty, pyqtSlot, pyqtSignal, Q_ENUMS
 from PyQt5.QtGui import QIcon, QCursor
 from PyQt5.QtQml import qmlRegisterType, QQmlApplicationEngine, QQmlListProperty
-# Twisted and netifaces
-from twisted.internet import protocol, error
+from quamash import QEventLoop
 from netifaces import interfaces, ifaddresses, AF_INET
 
 # -------------------------------------------------------------------------------
@@ -75,92 +76,88 @@ class SubprocessWrapper:
         pass
 
     def check_output(self, arg) -> None:
-        return subprocess.check_output(arg.split(), stderr=subprocess.STDOUT).decode('utf-8')
+        return subprocess.check_output(shlex.split(arg), stderr=subprocess.STDOUT).decode('utf-8')
 
     def run(self, arg: str, input: str = None, check=False) -> str:
         if input:
             input = input.encode('utf-8')
-        return subprocess.run(arg.split(), input=input, stdout=subprocess.PIPE,
+        return subprocess.run(shlex.split(arg), input=input, stdout=subprocess.PIPE,
                               check=check, stderr=subprocess.STDOUT).stdout.decode('utf-8')
 
 
 # -------------------------------------------------------------------------------
-# Twisted class
+# Asynchronous subprocess wrapper class
 # -------------------------------------------------------------------------------
-class ProcessProtocol(protocol.ProcessProtocol):
-    def __init__(self, onConnected, onOutReceived, onErrRecevied, onProcessEnded, logfile=None):
-        self.onConnected = onConnected
-        self.onOutReceived = onOutReceived
-        self.onErrRecevied = onErrRecevied
-        self.onProcessEnded = onProcessEnded
+class AsyncSubprocess():
+    class Protocol(asyncio.SubprocessProtocol):
+        def __init__(self, outer):
+            self.outer = outer
+            self.transport: asyncio.SubprocessTransport
+
+        def connection_made(self, transport):
+            print("connectionMade!")
+            self.outer.connected()
+            self.transport = transport
+            transport.get_pipe_transport(0).close()  # No more input
+
+        def pipe_data_received(self, fd, data):
+            if fd == 1: # stdout
+                self.outer.out_recevied(data)
+                if self.outer.logfile is not None:
+                    self.outer.logfile.write(data)
+            elif fd == 2: # stderr
+                self.outer.err_recevied(data)
+                if self.outer.logfile is not None:
+                    self.outer.logfile.write(data)
+
+        def pipe_connection_lost(self, fd, exc):
+            if fd == 0: # stdin
+                print("stdin is closed. (we probably did it)")
+            elif fd == 1: # stdout
+                print("The child closed their stdout.")
+            elif fd == 2: # stderr
+                print("The child closed their stderr.")
+
+        def connection_lost(self, exc):
+            print("Subprocess connection lost.")
+
+        def process_exited(self):
+            if self.outer.logfile is not None:
+                self.outer.logfile.close()
+            self.transport.close()
+            return_code = self.transport.get_returncode()
+            if return_code is None:
+                print("Unknown exit")
+                self.outer.ended(1)
+                return
+            print("processEnded, status", return_code)
+            self.outer.ended(return_code)
+
+    def __init__(self, connected, out_recevied, err_recevied, ended, logfile=None):
+        self.connected = connected
+        self.out_recevied = out_recevied
+        self.err_recevied = err_recevied
+        self.ended = ended
         self.logfile = logfile
-        # We cannot import this at the top of the file because qt5reactor should
-        # be installed in the main function first.
-        from twisted.internet import reactor  # pylint: disable=E0401
-        self.reactor = reactor
+        self.transport: asyncio.SubprocessTransport
+        self.protocol: self.Protocol
+
+    async def _run(self, arg: str, loop: asyncio.AbstractEventLoop):
+        self.transport, self.protocol = await loop.subprocess_exec(
+            lambda: self.Protocol(self), *shlex.split(arg), env=os.environ)
 
     def run(self, arg: str):
-        """Spawn a process
+        """Spawn a process.
         
         Arguments:
             arg {str} -- arguments in string
         """
+        loop = asyncio.get_event_loop()
+        loop.create_task(self._run(arg, loop))
 
-        args = arg.split()
-        self.reactor.spawnProcess(self, args[0], args=args, env=os.environ)
-
-    def kill(self):
-        """Kill a spawned process
-        """
-        self.transport.signalProcess('INT')
-
-    def connectionMade(self):
-        print("connectionMade!")
-        self.onConnected()
-        self.transport.closeStdin()  # No more input
-
-    def outReceived(self, data):
-        # print("outReceived! with %d bytes!" % len(data))
-        self.onOutReceived(data)
-        if self.logfile is not None:
-            self.logfile.write(data)
-
-    def errReceived(self, data):
-        # print("errReceived! with %d bytes!" % len(data))
-        self.onErrRecevied(data)
-        if self.logfile is not None:
-            self.logfile.write(data)
-
-    def inConnectionLost(self):
-        print("inConnectionLost! stdin is closed! (we probably did it)")
-        pass
-
-    def outConnectionLost(self):
-        print("outConnectionLost! The child closed their stdout!")
-        pass
-
-    def errConnectionLost(self):
-        print("errConnectionLost! The child closed their stderr.")
-        pass
-
-    def processExited(self, reason):
-        exitCode = reason.value.exitCode
-        if exitCode is None:
-            print("Unknown exit")
-            return
-        print("processEnded, status", exitCode)
-
-    def processEnded(self, reason):
-        if self.logfile is not None:
-            self.logfile.close()
-        exitCode = reason.value.exitCode
-        if exitCode is None:
-            print("Unknown exit")
-            self.onProcessEnded(1)
-            return
-        print("processEnded, status", exitCode)
-        print("quitting")
-        self.onProcessEnded(exitCode)
+    def close(self):
+        """Kill a spawned process."""
+        self.transport.send_signal(signal.SIGINT)
 
 
 # -------------------------------------------------------------------------------
@@ -428,7 +425,7 @@ class Backend(QObject):
         self._vncUsePassword: bool = False
         self._vncState: self.VNCState = self.VNCState.OFF
         # Primary screen and mouse posistion
-        self.vncServer: ProcessProtocol
+        self.vncServer: AsyncSubprocess
         # Check config file 
         # and initialize if needed
         need_init = False
@@ -589,11 +586,11 @@ class Backend(QObject):
         patter_disconnected = re.compile(r"^.*client_count: 0*$", re.M)
 
         # define callbacks
-        def _onConnected():
+        def _connected():
             print("VNC started.")
             self.vncState = self.VNCState.WAITING
 
-        def _onReceived(data):
+        def _received(data):
             data = data.decode("utf-8")
             if (self._vncState is not self.VNCState.CONNECTED) and patter_connected.search(data):
                 print("VNC connected.")
@@ -602,7 +599,7 @@ class Backend(QObject):
                 print("VNC disconnected.")
                 self.vncState = self.VNCState.WAITING
 
-        def _onEnded(exitCode):
+        def _ended(exitCode):
             if exitCode is not 0:
                 self.vncState = self.VNCState.ERROR
                 self.onError.emit('X11VNC: Error occurred.\n'
@@ -626,7 +623,7 @@ class Backend(QObject):
                         options += str(value['arg']) + ' '
         # Sart x11vnc, turn settings object into VNC arguments format
         logfile = open(X11VNC_LOG_PATH, "wb")
-        self.vncServer = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, logfile)
+        self.vncServer = AsyncSubprocess(_connected, _received, _received, _ended, logfile)
         try:
             virt = self.xrandr.get_virtual_screen()
         except RuntimeError as e:
@@ -643,13 +640,13 @@ class Backend(QObject):
     @pyqtSlot(str)
     def openDisplaySetting(self, app: str = "arandr"):
         # define callbacks
-        def _onConnected():
+        def _connected():
             print("External Display Setting opened.")
 
-        def _onReceived(data):
+        def _received(data):
             pass
 
-        def _onEnded(exitCode):
+        def _ended(exitCode):
             print("External Display Setting closed.")
             self.onDisplaySettingClosed.emit()
             if exitCode is not 0:
@@ -660,10 +657,10 @@ class Backend(QObject):
                 self.onError.emit('Wrong display settings program')
                 return
         program_list = [data[app]['args'], "arandr"]
-        program = ProcessProtocol(_onConnected, _onReceived, _onReceived, _onEnded, None)
+        program = AsyncSubprocess(_connected, _received, _received, _ended, None)
         running_program = ''
         for arg in program_list:
-            if not shutil.which(arg.split()[0]):
+            if not shutil.which(shlex.split(arg)[0]):
                 continue
             running_program = arg
             program.run(arg)
@@ -679,10 +676,10 @@ class Backend(QObject):
     def stopVNC(self, force=False):
         if force:
             # Usually called from atexit().
-            self.vncServer.kill()
+            self.vncServer.close()
             time.sleep(3)  # Make sure X11VNC shutdown before execute next atexit().
         if self._vncState in (self.VNCState.WAITING, self.VNCState.CONNECTED):
-            self.vncServer.kill()
+            self.vncServer.close()
         else:
             self.onError.emit("stopVNC called while it is not running")
 
@@ -809,6 +806,8 @@ def check_env(msg: Callable[[str], None]) -> None:
 def main_gui():
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
+    loop = QEventLoop(app)
+    asyncio.set_event_loop(loop)
     
     # Check environment first
     from PyQt5.QtWidgets import QMessageBox, QSystemTrayIcon
@@ -842,9 +841,11 @@ def main_gui():
         dialog("Failed to load QML")
         sys.exit(1)
     sys.exit(app.exec_())
-    reactor.run()
+    with loop:
+        loop.run_forever()
 
 def main_cli(args: argparse.Namespace):
+    loop = asyncio.get_event_loop()
     for key, value in vars(args).items():
         print(key, ": ", value)
     # Check the environment
@@ -886,9 +887,8 @@ def main_cli(args: argparse.Namespace):
         if state is backend.VNCState.OFF:
             sys.exit(0)
     backend.onVncStateChanged.connect(handle_vnc_changed)
-    from twisted.internet import reactor  # pylint: disable=E0401
     backend.startVNC(config['vnc']['port'])
-    reactor.run()
+    loop.run_forever()
 
 if __name__ == '__main__':
     main()

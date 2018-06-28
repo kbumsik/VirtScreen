@@ -145,8 +145,7 @@ setup(
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['PyQt5>=5.10.1',
-                      'Twisted>=17.9.0',
-                      'qt5reactor>=0.5',
+                      'Quamash>=0.6.0',
                       'netifaces>=0.10.6'],  # Optional
 
     # List additional groups of dependencies here (e.g. development

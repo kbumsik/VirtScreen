@@ -8,7 +8,7 @@ arch=("i686" "x86_64")
 url="https://github.com/kbumsik/VirtScreen"
 license=('GPL')
 groups=()
-depends=('xorg-xrandr' 'x11vnc' 'python-pyqt5' 'python-twisted' 'python-netifaces' 'python-qt5reactor')
+depends=('xorg-xrandr' 'x11vnc' 'python-pyqt5' 'python-quamash-git' 'python-netifaces')
 makedepends=('python-pip')
 optdepends=(
     'arandr: for display settings option'
