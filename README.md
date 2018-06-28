@@ -6,7 +6,7 @@
 
 VirtScreen is an easy-to-use Linux GUI app that creates a virtual secondary screen and shares it through VNC.
 
-VirtScreen is based on [PyQt5](https://www.riverbankcomputing.com/software/pyqt/intro) and [Twisted](https://twistedmatrix.com) in Python side and uses [x11vnc](https://github.com/LibVNC/x11vnc) and XRandR.
+VirtScreen is based on [PyQt5](https://www.riverbankcomputing.com/software/pyqt/intro) and [asyncio](https://docs.python.org/3/library/asyncio.html) in Python side and uses [x11vnc](https://github.com/LibVNC/x11vnc) and XRandR.
 
 ## Features
 
