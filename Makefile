@@ -8,6 +8,10 @@ DOCKER_RUN_TTY=docker run --interactive --tty -v $(shell pwd):/app $(DOCKER_NAME
 
 .ONESHELL:
 
+# Run script
+run:
+	python3 -m virtscreen
+
 # Docker tools
 .PHONY: docker docker-build
 

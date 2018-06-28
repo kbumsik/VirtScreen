@@ -195,7 +195,7 @@ setup(
     # executes the function `main` from this package when invoked:
     entry_points={  # Optional
         'console_scripts': [
-            'virtscreen = virtscreen.main:main',
+            'virtscreen = virtscreen.__main__:main',
         ],
     },
 
