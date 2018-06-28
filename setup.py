@@ -136,7 +136,7 @@ setup(
     #
     #   py_modules=["my_module"],
     #
-    packages=['virtscreen'],  # Required
+    packages=find_packages(),  # Required
 
     # This field lists other packages that your project depends on to run.
     # Any package you put here will be installed by pip when your project is
@@ -195,7 +195,7 @@ setup(
     # executes the function `main` from this package when invoked:
     entry_points={  # Optional
         'console_scripts': [
-            'virtscreen = virtscreen.virtscreen:main',
+            'virtscreen = virtscreen.main:main',
         ],
     },
 
