@@ -35,8 +35,6 @@ VirtScreen is based on [PyQt5](https://www.riverbankcomputing.com/software/pyqt/
 
 Upon installation (see Installing section to install), there will be a desktop entry called `VirtScreen`
 
-![desktop entry](https://raw.githubusercontent.com/kbumsik/VirtScreen/master/data/desktop_entry.png)
-
 ### CLI-only option
 
 You can run VirtScreen with `virtscreen` (or `./VirtScreen-x86_64.AppImage` if you use the AppImage package) with additional arguments.

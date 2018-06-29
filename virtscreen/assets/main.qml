@@ -129,9 +129,9 @@ Item {
     // Sytray Icon
     SystemTrayIcon {
         id: sysTrayIcon
-        iconSource: backend.vncState == Backend.CONNECTED ? "../icon/icon_tablet_on.png" :
-                    backend.virtScreenCreated ? "../icon/icon_tablet_off.png" :
-                    "../icon/icon.png"
+        iconSource: backend.vncState == Backend.CONNECTED ? "../icon/systray_tablet_on.svg" :
+                    backend.virtScreenCreated ? "../icon/systray_tablet_off.svg" :
+                    "../icon/systray_no_tablet.svg"
         visible: true
         property bool clicked: false
         

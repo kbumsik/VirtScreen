@@ -31,7 +31,7 @@ X11VNC_LOG_PATH = HOME_PATH + "/x11vnc_log.txt"
 X11VNC_PASSWORD_PATH = HOME_PATH + "/x11vnc_passwd"
 CONFIG_PATH = HOME_PATH + "/config.json"
 # Path in the program path
-ICON_PATH = BASE_PATH + "/icon/icon.png"
+ICON_PATH = BASE_PATH + "/icon/full_256x256.png"
 ASSETS_PATH = BASE_PATH + "/assets"
 DATA_PATH = ASSETS_PATH + "/data.json"
 DEFAULT_CONFIG_PATH = ASSETS_PATH + "/config.default.json"
