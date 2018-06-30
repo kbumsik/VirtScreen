@@ -29,6 +29,7 @@ from .path import HOME_PATH, ICON_PATH, MAIN_QML_PATH, CONFIG_PATH
 
 
 def main() -> None:
+    """Start main program"""
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
         description='Make your iPad/tablet/computer as a secondary monitor on Linux.\n\n'
@@ -77,6 +78,7 @@ def main() -> None:
     sys.exit(1)
 
 def check_env(msg: Callable[[str], None]) -> None:
+    """Check enveironments before start"""
     if os.environ['XDG_SESSION_TYPE'].lower() == 'wayland':
         msg("Currently Wayland is not supported")
         sys.exit(1)
@@ -113,14 +115,9 @@ def main_gui():
         sys.exit(1)
     check_env(dialog)
     
-    # Replace Twisted reactor with qt5reactor
-    import qt5reactor  # pylint: disable=E0401
-    qt5reactor.install()
-    from twisted.internet import reactor  # pylint: disable=E0401
-
+    app.setApplicationName("VirtScreen")
     app.setWindowIcon(QIcon(ICON_PATH))
     os.environ["QT_QUICK_CONTROLS_STYLE"] = "Material"
-    # os.environ["QT_QUICK_CONTROLS_STYLE"] = "Fusion"
 
     # Register the Python type.  Its URI is 'People', it's v1.0 and the type
     # will be called 'Person' in QML.
