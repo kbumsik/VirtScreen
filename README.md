@@ -31,9 +31,10 @@ VirtScreen is based on [PyQt5](https://www.riverbankcomputing.com/software/pyqt/
 
 ## How to use
 
-### GUI (default)
-
-Upon installation (see Installing section to install), there will be a desktop entry called `VirtScreen`
+1. Run the app.
+2. Set options (resolution etc.) and enable the virtual screen.
+3. Go to VNC tab and then start the VNC server.
+4. Run your favorite VNC client app on your second device and connect it to the IP address appeared on the app.
 
 ### CLI-only option
 
@@ -94,7 +95,7 @@ Download a `.deb` package from [releases page](https://github.com/kbumsik/VirtSc
 ```shell
 sudo apt-get update
 sudo apt-get install x11vnc
-sudo dpkg -i virtscreen_0.2.4-1_all.deb 
+sudo dpkg -i virtscreen_0.2.4-1_all.deb
 rm virtscreen_0.2.4-1_all.deb
 ```
 
@@ -108,14 +109,7 @@ yaourt virtscreen
 
 ### Python `pip`
 
-Although not recommended, you may install it using `pip`. In this case, you need to install the dependancies manually.
-
-You need [`x11vnc`](https://github.com/LibVNC/x11vnc), `xrandr`. To install (e.g. on Ubuntu):
-```bash
-sudo apt-get install x11vnc  # On Debian/Ubuntu, xrandr is included.
-```
-
-After you install the dependancies then run:
+Although not recommended, you may install it using `pip`. In this case, you need to install the dependancy (`xrandr` and `x11vnc`) manually.
 
 ```bash
 sudo pip install virtscreen
