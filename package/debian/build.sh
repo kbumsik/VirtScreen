@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PKGVER=0.2.4
+PKGVER=0.2.5
 # Required for debmake
 DEBEMAIL="k.bumsik@gmail.com"
 DEBFULLNAME="Bumsik Kim"
@@ -18,7 +18,7 @@ mv $PKGVER.tar.gz virtscreen-$PKGVER.tar.gz
 cp $ROOT/package/debian/Makefile \
     $ROOT/package/debian/virtscreen-$PKGVER/Makefile
 cd $ROOT/package/debian/virtscreen-$PKGVER
-debmake -b':sh'
+debmake --yes -b':sh'
 
 # copy files to build
 # debmake files

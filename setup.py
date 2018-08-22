@@ -40,7 +40,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.2.4',  # Required
+    version='0.2.5',  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -107,8 +107,8 @@ setup(
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
 
         # Environment
         'Environment :: X11 Applications',
@@ -116,8 +116,7 @@ setup(
         'Operating System :: POSIX :: Linux',
         
         # Framework used
-        'Framework :: Twisted',
-        # 'Framework :: AsyncIO',
+        'Framework :: AsyncIO',
     ],
 
     # This field adds keywords for your project which will appear on the
