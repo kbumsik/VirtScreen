@@ -79,7 +79,7 @@ def main() -> None:
 
 def check_env(msg: Callable[[str], None]) -> None:
     """Check enveironments before start"""
-    if os.environ['XDG_SESSION_TYPE'].lower() == 'wayland':
+    if os.environ.get('XDG_SESSION_TYPE', '').lower() == 'wayland':
         msg("Currently Wayland is not supported")
         sys.exit(1)
     if not HOME_PATH:
