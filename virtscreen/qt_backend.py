@@ -85,7 +85,7 @@ class Backend(QObject):
                     else:
                         value["available"] = False
                 # Default Display settings app for a Desktop Environment
-                desktop_environ = os.environ['XDG_CURRENT_DESKTOP'].lower()
+                desktop_environ = os.environ.get('XDG_CURRENT_DESKTOP', '').lower()
                 for key, value in data['displaySettingApps'].items():
                     for de in value['XDG_CURRENT_DESKTOP']:
                         if de in desktop_environ:
