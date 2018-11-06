@@ -7,6 +7,8 @@ import signal
 import json
 import shutil
 import argparse
+import logging
+from logging.handlers import RotatingFileHandler
 from typing import Callable
 import asyncio
 
@@ -25,8 +27,12 @@ from quamash import QEventLoop
 from .display import DisplayProperty
 from .xrandr import XRandR
 from .qt_backend import Backend, Cursor, Network
-from .path import HOME_PATH, ICON_PATH, MAIN_QML_PATH, CONFIG_PATH
+from .path import HOME_PATH, ICON_PATH, MAIN_QML_PATH, CONFIG_PATH, LOGGING_PATH
 
+def error(*args, **kwargs) -> None:
+    """Error printing"""
+    args = ('Error: ', *args)
+    print(*args, file=sys.stderr, **kwargs)
 
 def main() -> None:
     """Start main program"""
@@ -63,22 +69,46 @@ def main() -> None:
         help='Portrait mode. Width and height of the screen are swapped')
     parser.add_argument('--hidpi', action='store_true',
         help='HiDPI mode. Width and height are doubled')
+    parser.add_argument('--log', type=str,
+        help='Python logging level, For example, --log=DEBUG.\n'
+             'Only used for reporting bugs and debugging')
     # Add signal handler
     def on_exit(self, signum=None, frame=None):
         sys.exit(0)
     for sig in [signal.SIGINT, signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT]:
         signal.signal(sig, on_exit)
+
+    args = vars(parser.parse_args())
+    # Enable logging
+    if args['log'] is None:
+        args['log'] = 'WARNING'
+    log_level = getattr(logging, args['log'].upper(), None)
+    if not isinstance(log_level, int):
+        error('Please choose a correct python logging level')
+        sys.exit(1)
+    # When logging level is INFO or lower, print logs in terminal
+    # Otherwise log to a file
+    log_to_file = True if log_level > logging.INFO else False
+    FORMAT = "[%(levelname)s:%(filename)s:%(lineno)s:%(funcName)s()] %(message)s"
+    logging.basicConfig(level=log_level, format=FORMAT,
+                        **({'filename': LOGGING_PATH} if log_to_file else {}))
+    if log_to_file:
+        logger = logging.getLogger()
+        handler = RotatingFileHandler(LOGGING_PATH, mode='a', maxBytes=1024*4, backupCount=1)
+        logger.addHandler(handler)
+    logging.info('logging enabled')
+    del args['log']
+    logging.info(f'{args}')
     # Start main
-    args = parser.parse_args()
-    if any(vars(args).values()):
+    if any(args.values()):
         main_cli(args)
     else:
         main_gui()
-    print('Program should not reach here.')
+    error('Program should not reach here.')
     sys.exit(1)
 
 def check_env(msg: Callable[[str], None]) -> None:
-    """Check enveironments before start"""
+    """Check environments before start"""
     if os.environ.get('XDG_SESSION_TYPE', '').lower() == 'wayland':
         msg("Currently Wayland is not supported")
         sys.exit(1)
@@ -94,6 +124,7 @@ def check_env(msg: Callable[[str], None]) -> None:
     if not shutil.which('x11vnc'):
         msg("x11vnc is not installed.")
         sys.exit(1)
+    # Check if xrandr is correctly parsed.
     try:
         test = XRandR()
     except RuntimeError as e:
@@ -105,7 +136,7 @@ def main_gui():
     app = QApplication(sys.argv)
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
-    
+
     # Check environment first
     from PyQt5.QtWidgets import QMessageBox, QSystemTrayIcon
     def dialog(message: str) -> None:
@@ -114,7 +145,7 @@ def main_gui():
         dialog("Cannot detect system tray on this system.")
         sys.exit(1)
     check_env(dialog)
-    
+
     app.setApplicationName("VirtScreen")
     app.setWindowIcon(QIcon(ICON_PATH))
     os.environ["QT_QUICK_CONTROLS_STYLE"] = "Material"
@@ -138,38 +169,36 @@ def main_gui():
 
 def main_cli(args: argparse.Namespace):
     loop = asyncio.get_event_loop()
-    for key, value in vars(args).items():
-        print(key, ": ", value)
     # Check the environment
     check_env(print)
     if not os.path.exists(CONFIG_PATH):
-        print("Configuration file does not exist.\n"
+        error("Configuration file does not exist.\n"
               "Configure a virtual screen using GUI first.")
         sys.exit(1)
     # By instantiating the backend, additional verifications of config
-    # file will be done. 
+    # file will be done.
     backend = Backend()
     # Get settings
     with open(CONFIG_PATH, 'r') as f:
         config = json.load(f)
     # Override settings from arguments
     position = ''
-    if not args.auto:
+    if not args['auto']:
         args_virt = ['portrait', 'hidpi']
         for prop in args_virt:
-            if vars(args)[prop]:
+            if args[prop]:
                 config['virt'][prop] = True
         args_position = ['left', 'right', 'above', 'below']
-        tmp_args = {k: vars(args)[k] for k in args_position}
+        tmp_args = {k: args[k] for k in args_position}
         if not any(tmp_args.values()):
-            print("Choose a position relative to the primary monitor. (e.g. --left)")
+            error("Choose a position relative to the primary monitor. (e.g. --left)")
             sys.exit(1)
         for key, value in tmp_args.items():
             if value:
                 position = key
     # Create virtscreen and Start VNC
     def handle_error(msg):
-        print('Error: ', msg)
+        error(msg)
         sys.exit(1)
     backend.onError.connect(handle_error)
     backend.createVirtScreen(config['virt']['device'], config['virt']['width'],

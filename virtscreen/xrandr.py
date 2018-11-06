@@ -3,6 +3,7 @@
 import re
 import atexit
 import subprocess
+import logging
 from typing import List
 
 from .display import Display
@@ -53,9 +54,9 @@ class XRandR(SubprocessWrapper):
             screen.height = int(match.group(7))
             screen.x_offset = int(match.group(8))
             screen.y_offset = int(match.group(9))
-        print("Display information:")
+        logging.info("Display information:")
         for s in self.screens:
-            print("\t", s)
+            logging.info(f"\t{s}")
         if self.primary_idx is None:
             raise RuntimeError("There is no primary screen detected.\n"
                                "Go to display settings and set\n"
@@ -108,7 +109,7 @@ class XRandR(SubprocessWrapper):
 
     def create_virtual_screen(self, width, height, portrait=False, hidpi=False, pos='') -> None:
         self._update_screens()
-        print("creating: ", self.virt)
+        logging.info(f"creating: {self.virt}")
         self._add_screen_mode(width, height, portrait, hidpi)
         arg_pos = ['left', 'right', 'above', 'below']
         xrandr_pos = ['--left-of', '--right-of', '--above', '--below']

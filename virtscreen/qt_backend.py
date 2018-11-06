@@ -7,6 +7,7 @@ import os
 import shutil
 import atexit
 import time
+import logging
 
 from PyQt5.QtCore import QObject, pyqtProperty, pyqtSlot, pyqtSignal, Q_ENUMS
 from PyQt5.QtGui import QCursor
@@ -74,7 +75,7 @@ class Backend(QObject):
             p = SubprocessWrapper()
             arg = 'x11vnc -opts'
             ret = p.run(arg)
-            options = tuple(m.group(1) for m in re.finditer("\s*(-\w+)\s+", ret))
+            options = tuple(m.group(1) for m in re.finditer(r"\s*(-\w+)\s+", ret))
             # Set/unset available x11vnc options flags in config
             with open(CONFIG_PATH, 'r') as f, open(DATA_PATH, 'r') as f_data:
                 config = json.load(f)
@@ -92,6 +93,10 @@ class Backend(QObject):
             # Save the new config
             with open(CONFIG_PATH, 'w') as f:
                 f.write(json.dumps(config, indent=4, sort_keys=True))
+
+    def promptError(self, msg):
+        logging.error(msg)
+        self.onError.emit(msg)
 
     # Qt properties
     @pyqtProperty(str, constant=True)
@@ -118,7 +123,7 @@ class Backend(QObject):
         try:
             return QQmlListProperty(DisplayProperty, self, [DisplayProperty(x) for x in self.xrandr.screens])
         except RuntimeError as e:
-            self.onError.emit(str(e))
+            self.promptError(str(e))
             return QQmlListProperty(DisplayProperty, self, [])
 
     @pyqtProperty(bool, notify=onVncUsePasswordChanged)
@@ -148,28 +153,28 @@ class Backend(QObject):
     @pyqtSlot(str, int, int, bool, bool)
     def createVirtScreen(self, device, width, height, portrait, hidpi, pos=''):
         self.xrandr.virt_name = device
-        print("Creating a Virtual Screen...")
+        logging.info("Creating a Virtual Screen...")
         try:
             self.xrandr.create_virtual_screen(width, height, portrait, hidpi, pos)
         except subprocess.CalledProcessError as e:
-            self.onError.emit(str(e.cmd) + '\n' + e.stdout.decode('utf-8'))
+            self.promptError(str(e.cmd) + '\n' + e.stdout.decode('utf-8'))
             return
         except RuntimeError as e:
-            self.onError.emit(str(e))
+            self.promptError(str(e))
             return
         self.virtScreenCreated = True
 
     @pyqtSlot()
     def deleteVirtScreen(self):
-        print("Deleting the Virtual Screen...")
+        logging.info("Deleting the Virtual Screen...")
         if self.vncState is not self.VNCState.OFF:
-            self.onError.emit("Turn off the VNC server first")
+            self.promptError("Turn off the VNC server first")
             self.virtScreenCreated = True
             return
         try:
             self.xrandr.delete_virtual_screen()
         except RuntimeError as e:
-            self.onError.emit(str(e))
+            self.promptError(str(e))
             return
         self.virtScreenCreated = False
 
@@ -181,11 +186,11 @@ class Backend(QObject):
             try:
                 p.run(f"x11vnc -storepasswd {X11VNC_PASSWORD_PATH}", input=password, check=True)
             except subprocess.CalledProcessError as e:
-                self.onError.emit(str(e.cmd) + '\n' + e.stdout.decode('utf-8'))
+                self.promptError(str(e.cmd) + '\n' + e.stdout.decode('utf-8'))
                 return
             self.vncUsePassword = True
         else:
-            self.onError.emit("Empty password")
+            self.promptError("Empty password")
 
     @pyqtSlot()
     def deleteVNCPassword(self):
@@ -193,16 +198,16 @@ class Backend(QObject):
             os.remove(X11VNC_PASSWORD_PATH)
             self.vncUsePassword = False
         else:
-            self.onError.emit("Failed deleting the password file")
+            self.promptError("Failed deleting the password file")
 
     @pyqtSlot(int)
     def startVNC(self, port):
         # Check if a virtual screen created
         if not self.virtScreenCreated:
-            self.onError.emit("Virtual Screen not crated.")
+            self.promptError("Virtual Screen not crated.")
             return
         if self.vncState is not self.VNCState.OFF:
-            self.onError.emit("VNC Server is already running.")
+            self.promptError("VNC Server is already running.")
             return
         # regex used in callbacks
         patter_connected = re.compile(r"^.*Got connection from client.*$", re.M)
@@ -210,27 +215,27 @@ class Backend(QObject):
 
         # define callbacks
         def _connected():
-            print("VNC started.")
+            logging.info("VNC started.")
             self.vncState = self.VNCState.WAITING
 
         def _received(data):
             data = data.decode("utf-8")
             if (self._vncState is not self.VNCState.CONNECTED) and patter_connected.search(data):
-                print("VNC connected.")
+                logging.info("VNC connected.")
                 self.vncState = self.VNCState.CONNECTED
             if (self._vncState is self.VNCState.CONNECTED) and patter_disconnected.search(data):
-                print("VNC disconnected.")
+                logging.info("VNC disconnected.")
                 self.vncState = self.VNCState.WAITING
 
         def _ended(exitCode):
             if exitCode is not 0:
                 self.vncState = self.VNCState.ERROR
-                self.onError.emit('X11VNC: Error occurred.\n'
+                self.promptError('X11VNC: Error occurred.\n'
                                   'Double check if the port is already used.')
                 self.vncState = self.VNCState.OFF  # TODO: better handling error state
             else:
                 self.vncState = self.VNCState.OFF
-            print("VNC Exited.")
+            logging.info("VNC Exited.")
             atexit.unregister(self.stopVNC)
         # load settings
         with open(CONFIG_PATH, 'r') as f:
@@ -250,7 +255,7 @@ class Backend(QObject):
         try:
             virt = self.xrandr.get_virtual_screen()
         except RuntimeError as e:
-            self.onError.emit(str(e))
+            self.promptError(str(e))
             return
         clip = f"{virt.width}x{virt.height}+{virt.x_offset}+{virt.y_offset}"
         arg = f"x11vnc -rfbport {port} -clip {clip} {options}"
@@ -264,20 +269,20 @@ class Backend(QObject):
     def openDisplaySetting(self, app: str = "arandr"):
         # define callbacks
         def _connected():
-            print("External Display Setting opened.")
+            logging.info("External Display Setting opened.")
 
         def _received(data):
             pass
 
         def _ended(exitCode):
-            print("External Display Setting closed.")
+            logging.info("External Display Setting closed.")
             self.onDisplaySettingClosed.emit()
             if exitCode is not 0:
-                self.onError.emit(f'Error opening "{running_program}".')
+                self.promptError(f'Error opening "{running_program}".')
         with open(DATA_PATH, 'r') as f:
             data = json.load(f)['displaySettingApps']
             if app not in data:
-                self.onError.emit('Wrong display settings program')
+                self.promptError('Wrong display settings program')
                 return
         program_list = [data[app]['args'], "arandr"]
         program = AsyncSubprocess(_connected, _received, _received, _ended, None)
@@ -288,12 +293,12 @@ class Backend(QObject):
             running_program = arg
             program.run(arg)
             return
-        self.onError.emit('Failed to find a display settings program.\n'
-                          'Please install ARandR package.\n'
-                          '(e.g. sudo apt-get install arandr)\n'
-                          'Please issue a feature request\n'
-                          'if you wish to add a display settings\n'
-                          'program for your Desktop Environment.')
+        self.promptError('Failed to find a display settings program.\n'
+                         'Please install ARandR package.\n'
+                         '(e.g. sudo apt-get install arandr)\n'
+                         'Please issue a feature request\n'
+                         'if you wish to add a display settings\n'
+                         'program for your Desktop Environment.')
 
     @pyqtSlot()
     def stopVNC(self, force=False):
@@ -304,7 +309,7 @@ class Backend(QObject):
         if self._vncState in (self.VNCState.WAITING, self.VNCState.CONNECTED):
             self.vncServer.close()
         else:
-            self.onError.emit("stopVNC called while it is not running")
+            self.promptError("stopVNC called while it is not running")
 
     @pyqtSlot()
     def clearCache(self):

@@ -5,6 +5,7 @@ import asyncio
 import signal
 import shlex
 import os
+import logging
 
 
 class SubprocessWrapper:
@@ -30,7 +31,7 @@ class _Protocol(asyncio.SubprocessProtocol):
         self.transport: asyncio.SubprocessTransport
 
     def connection_made(self, transport):
-        print("connectionMade!")
+        logging.info("connectionMade!")
         self.outer.connected()
         self.transport = transport
         transport.get_pipe_transport(0).close()  # No more input
@@ -47,14 +48,14 @@ class _Protocol(asyncio.SubprocessProtocol):
 
     def pipe_connection_lost(self, fd, exc):
         if fd == 0: # stdin
-            print("stdin is closed. (we probably did it)")
+            logging.info("stdin is closed. (we probably did it)")
         elif fd == 1: # stdout
-            print("The child closed their stdout.")
+            logging.info("The child closed their stdout.")
         elif fd == 2: # stderr
-            print("The child closed their stderr.")
+            logging.info("The child closed their stderr.")
 
     def connection_lost(self, exc):
-        print("Subprocess connection lost.")
+        logging.info("Subprocess connection lost.")
 
     def process_exited(self):
         if self.outer.logfile is not None:
@@ -62,10 +63,10 @@ class _Protocol(asyncio.SubprocessProtocol):
         self.transport.close()
         return_code = self.transport.get_returncode()
         if return_code is None:
-            print("Unknown exit")
+            logging.error("Unknown exit")
             self.outer.ended(1)
             return
-        print("processEnded, status", return_code)
+        logging.info(f"processEnded, status {return_code}")
         self.outer.ended(return_code)
 
         

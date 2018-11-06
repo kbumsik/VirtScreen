@@ -8,9 +8,20 @@ DOCKER_RUN_TTY=docker run --interactive --tty -v $(shell pwd):/app $(DOCKER_NAME
 
 .ONESHELL:
 
+.PHONY: run debug run-appimage debug-appimage
+
 # Run script
 run:
 	python3 -m virtscreen
+
+debug:
+	QT_DEBUG_PLUGINS=1 QML_IMPORT_TRACE=1 python3 -m virtscreen --log=DEBUG
+
+run-appimage: package/appimage/VirtScreen-x86_64.AppImage
+	$<
+
+debug-appimage: package/appimage/VirtScreen-x86_64.AppImage
+	QT_DEBUG_PLUGINS=1 QML_IMPORT_TRACE=1 $< --log=DEBUG
 
 # Docker tools
 .PHONY: docker docker-build
@@ -36,14 +47,14 @@ wheel-clean:
 .PHONY: appimage-clean
 .SECONDARY: package/appimage/VirtScreen-x86_64.AppImage
 
-package/appimage/%.AppImage:
+package/appimage/VirtScreen-x86_64.AppImage:
 	$(DOCKER_RUN) package/appimage/build.sh
 	$(DOCKER_RUN) chown -R $(shell id -u):$(shell id -u) package/appimage
 
 appimage-clean:
 	-rm -rf package/appimage/virtscreen.AppDir package/appimage/VirtScreen-x86_64.AppImage
 
-# For Debian packaging, https://www.debian.org/doc/manuals/maint-guide/index.en.html 
+# For Debian packaging, https://www.debian.org/doc/manuals/maint-guide/index.en.html
 #	https://www.debian.org/doc/manuals/debmake-doc/ch08.en.html#setup-py
 .PHONY: deb-contents deb-clean
 

@@ -29,6 +29,7 @@ BASE_PATH = os.path.dirname(__file__) # Location of this script
 X11VNC_LOG_PATH = HOME_PATH + "/x11vnc_log.txt"
 X11VNC_PASSWORD_PATH = HOME_PATH + "/x11vnc_passwd"
 CONFIG_PATH = HOME_PATH + "/config.json"
+LOGGING_PATH = HOME_PATH + "/log.txt"
 # Path in the program path
 ICON_PATH = BASE_PATH + "/icon/full_256x256.png"
 ASSETS_PATH = BASE_PATH + "/assets"
