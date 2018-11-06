@@ -38,7 +38,7 @@ VirtScreen is based on [PyQt5](https://www.riverbankcomputing.com/software/pyqt/
 
 ### CLI-only option
 
-You can run VirtScreen with `virtscreen` (or `./VirtScreen-x86_64.AppImage` if you use the AppImage package) with additional arguments.
+You can run VirtScreen with `virtscreen` (or `./VirtScreen.AppImage` if you use the AppImage package) with additional arguments.
 
 ```bash
 usage: virtscreen [-h] [--auto] [--left] [--right] [--above] [--below]
@@ -83,10 +83,10 @@ virtscreen --below --portrait  --hipdi  # Below, portrait, HiDPI mode.
 Download a `.AppImage` package from [releases page](https://github.com/kbumsik/VirtScreen/releases). Then make it executable:
 
 ```shell
-chmod a+x VirtScreen-x86_64.AppImage
+chmod a+x VirtScreen.AppImage
 ```
 
-Then you can run it by double click the file or `./VirtScreen-x86_64.AppImage` in terminal.
+Then you can run it by double click the file or `./VirtScreen.AppImage` in terminal.
 
 ### Debian (Ubuntu)
 
@@ -95,8 +95,8 @@ Download a `.deb` package from [releases page](https://github.com/kbumsik/VirtSc
 ```shell
 sudo apt-get update
 sudo apt-get install x11vnc
-sudo dpkg -i virtscreen_0.2.4-1_all.deb
-rm virtscreen_0.2.4-1_all.deb
+sudo dpkg -i virtscreen.deb
+rm virtscreen.deb
 ```
 
 ### Arch Linux (AUR)

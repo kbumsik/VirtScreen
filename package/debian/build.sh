@@ -30,7 +30,7 @@ cp $ROOT/package/debian/Makefile \
 cp $ROOT/package/debian/{control,README.Debian} \
     $ROOT/package/debian/build/debian/
 # binary and data files
-cp $ROOT/package/appimage/VirtScreen-x86_64.AppImage \
+cp $ROOT/package/appimage/VirtScreen.AppImage \
     $ROOT/package/debian/build/
 cp $ROOT/virtscreen.desktop \
     $ROOT/package/debian/build/

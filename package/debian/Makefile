@@ -6,7 +6,7 @@ all:
 SHELL = /bin/bash
 install:
 	mkdir -p $(DESTDIR)$(prefix)/bin
-	install -m 755 VirtScreen-x86_64.AppImage \
+	install -m 755 VirtScreen.AppImage \
 			$(DESTDIR)$(prefix)/bin/virtscreen
 	# Copy desktop entry and icon
 	install -m 644 -D virtscreen.desktop \

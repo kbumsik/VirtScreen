@@ -6,9 +6,14 @@ DOCKER_NAME=kbumsik/virtscreen
 DOCKER_RUN=docker run --interactive --tty -v $(shell pwd):/app $(DOCKER_NAME)
 DOCKER_RUN_TTY=docker run --interactive --tty -v $(shell pwd):/app $(DOCKER_NAME)
 
+PKG_APPIMAGE=package/appimage/VirtScreen.AppImage
+PKG_DEBIAN=package/debian/virtscreen.deb
+
 .ONESHELL:
 
 .PHONY: run debug run-appimage debug-appimage
+
+all: package/pypi/*.whl $(PKG_APPIMAGE) $(PKG_DEBIAN)
 
 # Run script
 run:
@@ -17,10 +22,10 @@ run:
 debug:
 	QT_DEBUG_PLUGINS=1 QML_IMPORT_TRACE=1 python3 -m virtscreen --log=DEBUG
 
-run-appimage: package/appimage/VirtScreen-x86_64.AppImage
+run-appimage: $(PKG_APPIMAGE)
 	$<
 
-debug-appimage: package/appimage/VirtScreen-x86_64.AppImage
+debug-appimage: $(PKG_APPIMAGE)
 	QT_DEBUG_PLUGINS=1 QML_IMPORT_TRACE=1 $< --log=DEBUG
 
 # Docker tools
@@ -45,25 +50,27 @@ wheel-clean:
 
 # For AppImage packaging, https://github.com/AppImage/AppImageKit/wiki/Creating-AppImages
 .PHONY: appimage-clean
-.SECONDARY: package/appimage/VirtScreen-x86_64.AppImage
+.SECONDARY: $(PKG_APPIMAGE)
 
-package/appimage/VirtScreen-x86_64.AppImage:
+$(PKG_APPIMAGE):
 	$(DOCKER_RUN) package/appimage/build.sh
+	$(DOCKER_RUN) mv package/appimage/VirtScreen-x86_64.AppImage $@
 	$(DOCKER_RUN) chown -R $(shell id -u):$(shell id -u) package/appimage
 
 appimage-clean:
-	-rm -rf package/appimage/virtscreen.AppDir package/appimage/VirtScreen-x86_64.AppImage
+	-rm -rf package/appimage/virtscreen.AppDir $(PKG_APPIMAGE)
 
 # For Debian packaging, https://www.debian.org/doc/manuals/maint-guide/index.en.html
 #	https://www.debian.org/doc/manuals/debmake-doc/ch08.en.html#setup-py
 .PHONY: deb-contents deb-clean
 
-package/debian/%.deb: package/appimage/VirtScreen-x86_64.AppImage
+$(PKG_DEBIAN): $(PKG_APPIMAGE)
 	$(DOCKER_RUN) package/debian/build.sh
+	$(DOCKER_RUN) mv package/debian/*.deb $@
 	$(DOCKER_RUN) chown -R $(shell id -u):$(shell id -u) package/debian
 
-deb-contents:
-	$(DOCKER_RUN) dpkg -c package/debian/*.deb
+deb-contents: $(PKG_DEBIAN)
+	$(DOCKER_RUN) dpkg -c $<
 
 deb-clean:
 	rm -rf package/debian/build package/debian/*.deb package/debian/*.buildinfo \
