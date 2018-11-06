@@ -28,7 +28,7 @@ debug-appimage: package/appimage/VirtScreen-x86_64.AppImage
 
 docker:
 	$(DOCKER_RUN_TTY) /bin/bash
-	 
+
 docker-build:
 	docker build -f Dockerfile -t $(DOCKER_NAME) .
 
