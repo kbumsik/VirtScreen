@@ -70,7 +70,7 @@ def main() -> None:
     parser.add_argument('--hidpi', action='store_true',
         help='HiDPI mode. Width and height are doubled')
     parser.add_argument('--log', type=str,
-        help='Python logging level, For example, --log=DEBUG.\n'
+        help='Python logging level, For example, --log=INFO.\n'
              'Only used for reporting bugs and debugging')
     # Add signal handler
     def on_exit(self, signum=None, frame=None):
@@ -177,7 +177,7 @@ def main_cli(args: argparse.Namespace):
         sys.exit(1)
     # By instantiating the backend, additional verifications of config
     # file will be done.
-    backend = Backend()
+    backend = Backend(logger=print)
     # Get settings
     with open(CONFIG_PATH, 'r') as f:
         config = json.load(f)

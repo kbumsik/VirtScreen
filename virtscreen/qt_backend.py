@@ -8,6 +8,7 @@ import shutil
 import atexit
 import time
 import logging
+from typing import Callable
 
 from PyQt5.QtCore import QObject, pyqtProperty, pyqtSlot, pyqtSignal, Q_ENUMS
 from PyQt5.QtGui import QCursor
@@ -41,7 +42,7 @@ class Backend(QObject):
     onDisplaySettingClosed = pyqtSignal()
     onError = pyqtSignal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, logger=logging.info, error_logger=logging.error):
         super(Backend, self).__init__(parent)
         # Virtual screen properties
         self.xrandr: XRandR = XRandR()
@@ -51,6 +52,9 @@ class Backend(QObject):
         self._vncState: self.VNCState = self.VNCState.OFF
         # Primary screen and mouse posistion
         self.vncServer: AsyncSubprocess
+        # Info/error logger
+        self.log: Callable[[str], None] = logger
+        self.log_error: Callable[[str], None] = error_logger
         # Check config file 
         # and initialize if needed
         need_init = False
@@ -95,7 +99,7 @@ class Backend(QObject):
                 f.write(json.dumps(config, indent=4, sort_keys=True))
 
     def promptError(self, msg):
-        logging.error(msg)
+        self.log_error(msg)
         self.onError.emit(msg)
 
     # Qt properties
@@ -153,7 +157,7 @@ class Backend(QObject):
     @pyqtSlot(str, int, int, bool, bool)
     def createVirtScreen(self, device, width, height, portrait, hidpi, pos=''):
         self.xrandr.virt_name = device
-        logging.info("Creating a Virtual Screen...")
+        self.log("Creating a Virtual Screen...")
         try:
             self.xrandr.create_virtual_screen(width, height, portrait, hidpi, pos)
         except subprocess.CalledProcessError as e:
@@ -163,10 +167,11 @@ class Backend(QObject):
             self.promptError(str(e))
             return
         self.virtScreenCreated = True
+        self.log("The Virtual Screen successfully created.")
 
     @pyqtSlot()
     def deleteVirtScreen(self):
-        logging.info("Deleting the Virtual Screen...")
+        self.log("Deleting the Virtual Screen...")
         if self.vncState is not self.VNCState.OFF:
             self.promptError("Turn off the VNC server first")
             self.virtScreenCreated = True
@@ -215,16 +220,16 @@ class Backend(QObject):
 
         # define callbacks
         def _connected():
-            logging.info("VNC started.")
+            self.log(f"VNC started. Now connect a VNC client to port {port}.")
             self.vncState = self.VNCState.WAITING
 
         def _received(data):
             data = data.decode("utf-8")
             if (self._vncState is not self.VNCState.CONNECTED) and patter_connected.search(data):
-                logging.info("VNC connected.")
+                self.log("VNC connected.")
                 self.vncState = self.VNCState.CONNECTED
             if (self._vncState is self.VNCState.CONNECTED) and patter_disconnected.search(data):
-                logging.info("VNC disconnected.")
+                self.log("VNC disconnected.")
                 self.vncState = self.VNCState.WAITING
 
         def _ended(exitCode):
@@ -235,7 +240,7 @@ class Backend(QObject):
                 self.vncState = self.VNCState.OFF  # TODO: better handling error state
             else:
                 self.vncState = self.VNCState.OFF
-            logging.info("VNC Exited.")
+            self.log("VNC Exited.")
             atexit.unregister(self.stopVNC)
         # load settings
         with open(CONFIG_PATH, 'r') as f:
@@ -269,13 +274,13 @@ class Backend(QObject):
     def openDisplaySetting(self, app: str = "arandr"):
         # define callbacks
         def _connected():
-            logging.info("External Display Setting opened.")
+            self.log("External Display Setting opened.")
 
         def _received(data):
             pass
 
         def _ended(exitCode):
-            logging.info("External Display Setting closed.")
+            self.log("External Display Setting closed.")
             self.onDisplaySettingClosed.emit()
             if exitCode is not 0:
                 self.promptError(f'Error opening "{running_program}".')
