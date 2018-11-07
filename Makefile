@@ -8,12 +8,13 @@ DOCKER_RUN_TTY=docker run --interactive --tty -v $(shell pwd):/app $(DOCKER_NAME
 
 PKG_APPIMAGE=package/appimage/VirtScreen.AppImage
 PKG_DEBIAN=package/debian/virtscreen.deb
+ARCHIVE=virtscreen-$(VERSION).tar.gz
 
 .ONESHELL:
 
 .PHONY: run debug run-appimage debug-appimage
 
-all: package/pypi/*.whl $(PKG_APPIMAGE) $(PKG_DEBIAN)
+all: package/pypi/*.whl $(ARCHIVE) $(PKG_APPIMAGE) $(PKG_DEBIAN)
 
 # Run script
 run:
@@ -27,6 +28,12 @@ run-appimage: $(PKG_APPIMAGE)
 
 debug-appimage: $(PKG_APPIMAGE)
 	QT_DEBUG_PLUGINS=1 QML_IMPORT_TRACE=1 $< --log=DEBUG
+
+# tar.gz
+.PHONY: archive
+
+archive $(ARCHIVE):
+	git archive --format=tar.gz --prefix=virtscreen-$(VERSION)/ -o $@ HEAD
 
 # Docker tools
 .PHONY: docker docker-build
@@ -64,7 +71,7 @@ appimage-clean:
 #	https://www.debian.org/doc/manuals/debmake-doc/ch08.en.html#setup-py
 .PHONY: deb-contents deb-clean
 
-$(PKG_DEBIAN): $(PKG_APPIMAGE)
+$(PKG_DEBIAN): $(PKG_APPIMAGE) $(ARCHIVE)
 	$(DOCKER_RUN) package/debian/build.sh
 	$(DOCKER_RUN) mv package/debian/*.deb $@
 	$(DOCKER_RUN) chown -R $(shell id -u):$(shell id -u) package/debian
@@ -121,3 +128,4 @@ override-version:
 
 # Clean packages
 clean: appimage-clean arch-clean deb-clean wheel-clean
+	-rm -f $(ARCHIVE)
