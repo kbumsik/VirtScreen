@@ -79,6 +79,34 @@ def main() -> None:
         signal.signal(sig, on_exit)
 
     args = vars(parser.parse_args())
+    cli_args = ['auto', 'left', 'right', 'above', 'below', 'portrait', 'hidpi']
+    # Start main
+    if any((value and arg in cli_args) for arg, value in args.items()):
+        main_cli(args)
+    else:
+        main_gui(args)
+    error('Program should not reach here.')
+    sys.exit(1)
+
+def check_env(args: argparse.Namespace, msg: Callable[[str], None]) -> None:
+    """Check environments and arguments before start. This also enable logging"""
+    if os.environ.get('XDG_SESSION_TYPE', '').lower() == 'wayland':
+        msg("Currently Wayland is not supported")
+        sys.exit(1)
+    # Check ~/.config/virtscreen
+    if not HOME_PATH: # This is set in path.py
+        msg("Cannot detect home directory.")
+        sys.exit(1)
+    if not os.path.exists(HOME_PATH):
+        try:
+            os.makedirs(HOME_PATH)
+        except:
+            msg("Cannot create ~/.config/virtscreen")
+            sys.exit(1)
+    # Check x11vnc
+    if not shutil.which('x11vnc'):
+        msg("x11vnc is not installed.")
+        sys.exit(1)
     # Enable logging
     if args['log'] is None:
         args['log'] = 'WARNING'
@@ -99,31 +127,6 @@ def main() -> None:
     logging.info('logging enabled')
     del args['log']
     logging.info(f'{args}')
-    # Start main
-    if any(args.values()):
-        main_cli(args)
-    else:
-        main_gui()
-    error('Program should not reach here.')
-    sys.exit(1)
-
-def check_env(msg: Callable[[str], None]) -> None:
-    """Check environments before start"""
-    if os.environ.get('XDG_SESSION_TYPE', '').lower() == 'wayland':
-        msg("Currently Wayland is not supported")
-        sys.exit(1)
-    if not HOME_PATH:
-        msg("Cannot detect home directory.")
-        sys.exit(1)
-    if not os.path.exists(HOME_PATH):
-        try:
-            os.makedirs(HOME_PATH)
-        except:
-            msg("Cannot create ~/.config/virtscreen")
-            sys.exit(1)
-    if not shutil.which('x11vnc'):
-        msg("x11vnc is not installed.")
-        sys.exit(1)
     # Check if xrandr is correctly parsed.
     try:
         test = XRandR()
@@ -131,7 +134,7 @@ def check_env(msg: Callable[[str], None]) -> None:
         msg(str(e))
         sys.exit(1)
 
-def main_gui():
+def main_gui(args: argparse.Namespace):
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     loop = QEventLoop(app)
@@ -144,7 +147,7 @@ def main_gui():
     if not QSystemTrayIcon.isSystemTrayAvailable():
         dialog("Cannot detect system tray on this system.")
         sys.exit(1)
-    check_env(dialog)
+    check_env(args, dialog)
 
     app.setApplicationName("VirtScreen")
     app.setWindowIcon(QIcon(ICON_PATH))
@@ -170,7 +173,7 @@ def main_gui():
 def main_cli(args: argparse.Namespace):
     loop = asyncio.get_event_loop()
     # Check the environment
-    check_env(print)
+    check_env(args, print)
     if not os.path.exists(CONFIG_PATH):
         error("Configuration file does not exist.\n"
               "Configure a virtual screen using GUI first.")
