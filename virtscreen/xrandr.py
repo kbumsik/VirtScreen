@@ -72,7 +72,7 @@ class XRandR(SubprocessWrapper):
     def _add_screen_mode(self, width, height, portrait, hidpi) -> None:
         if not self.virt or not self.virt_name:
             raise RuntimeError("No virtual screen selected.\n"
-                               "Go to Display->Virtual Display->Advaced\n"
+                               "Go to Display->Virtual Display->Advanced\n"
                                "To select a device.")
         # Set virtual screen property first
         self.virt.width = width
