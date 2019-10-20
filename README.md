@@ -101,10 +101,10 @@ rm virtscreen.deb
 
 ### Arch Linux (AUR)
 
-There is [`virtscreen` AUR package](https://aur.archlinux.org/packages/virtscreen/) available. Though there are many ways to install the AUR package, one of the easiest way is to use [`yaourt`](https://github.com/polygamma/aurman) AUR helper:
+There is a [`virtscreen` AUR package](https://aur.archlinux.org/packages/virtscreen/) available. Though there are many ways to install the AUR package, one of the easiest ways is to use  [`yay`](https://github.com/Jguer/yay) a AUR helper:
 
 ```bash
-yaourt virtscreen
+yay -S virtscreen
 ```
 
 ### Python `pip`
