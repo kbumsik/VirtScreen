@@ -10,7 +10,7 @@ from .display import Display
 from .process import SubprocessWrapper
 
 
-VIRT_SCREEN_SUFFIX = "_virt"
+VIRT_SCREEN_SUFFIX = "-virt"
 
 
 class XRandR(SubprocessWrapper):
