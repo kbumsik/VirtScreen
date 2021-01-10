@@ -17,7 +17,7 @@ ColumnLayout {
                 SpinBox {
                     value: settings.virt.width
                     from: 640
-                    to: 1920
+                    to: 8192
                     stepSize: 1
                     editable: true
                     onValueModified: {
@@ -31,7 +31,7 @@ ColumnLayout {
                 SpinBox {
                     value: settings.virt.height
                     from: 360
-                    to: 1080
+                    to: 4320
                     stepSize : 1
                     editable: true
                     onValueModified: {
