@@ -1,6 +1,6 @@
 # See https://packaging.python.org/tutorials/distributing-packages/#packaging-your-project
 # for python packaging reference.
-VERSION ?= 0.3.1
+VERSION ?= 0.3.2
 
 DOCKER_NAME=kbumsik/virtscreen
 DOCKER_RUN=docker run --interactive --tty -v $(shell pwd):/app $(DOCKER_NAME)
