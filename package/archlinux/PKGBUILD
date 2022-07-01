@@ -1,7 +1,7 @@
 # Maintainer: Bumsik Kim <k.bumsik@gmail.com>
 _pkgname_camelcase=VirtScreen
 pkgname=virtscreen
-pkgver=0.3.1
+pkgver=0.3.2
 pkgrel=1
 pkgdesc="Make your iPad/tablet/computer as a secondary monitor on Linux"
 arch=("i686" "x86_64")
@@ -11,7 +11,7 @@ groups=()
 depends=('xorg-xrandr' 'x11vnc' 'python-pyqt5' 'qt5-quickcontrols2' 'python-qasync' 'python-netifaces')
 makedepends=('python-pip' 'perl')
 optdepends=(
-    'arandr: for display settings option'
+  'arandr: for display settings option'
 )
 provides=($pkgname)
 conflicts=()
@@ -27,9 +27,9 @@ md5sums=('SKIP')
 prepare() {
   cd $srcdir/src
   # Delete PyQt5 from install_requires because python-pyqt5 does not have PyPI metadata.
-	# See https://bugs.archlinux.org/task/58887
+  # See https://bugs.archlinux.org/task/58887
   perl -pi -e "s/\'PyQt5>=\d+\.\d+\.\d+\',//" \
-			setup.py
+    setup.py
 }
 
 package() {
