@@ -143,7 +143,7 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['Quasync>=0.9.1',
+    install_requires=['qasync>=0.23.0',
                       'netifaces>=0.10.6'],  # Optional
 
     # List additional groups of dependencies here (e.g. development
